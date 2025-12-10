@@ -8,7 +8,36 @@
 
 **Kelola multiple akun pada website yang sama dengan mudah, aman, dan cepat.**
 
-[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Screenshots](#-screenshots) • [Credits](#-credits)
+[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Disclaimer](#%EF%B8%8F-disclaimer) • [Credits](#-credits)
+
+</div>
+
+---
+
+## ⚠️ Disclaimer
+
+> **PERINGATAN PENTING - HARAP DIBACA**
+
+Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, seperti:
+- Mengelola akun pribadi dan akun kerja pada satu browser
+- Testing dan development web application
+- Mengelola multiple akun yang **SAH milik Anda sendiri**
+
+### ❌ DILARANG menggunakan extension ini untuk:
+- Mengakses akun orang lain tanpa izin
+- Melakukan aktivitas hacking, phishing, atau penipuan
+- Bypass security systems atau authentication
+- Aktivitas ilegal lainnya yang melanggar hukum
+
+### ⚖️ Tanggung Jawab
+**Pengembang TIDAK bertanggung jawab** atas segala bentuk penyalahgunaan extension ini. Dengan menggunakan extension ini, Anda setuju bahwa:
+1. Anda bertanggung jawab penuh atas cara penggunaan extension
+2. Anda tidak akan menggunakan untuk aktivitas ilegal
+3. Anda memahami risiko keamanan dari menyimpan session data
+
+**Gunakan dengan bijak dan bertanggung jawab!**
+
+---
 
 </div>
 
