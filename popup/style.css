@@ -107,13 +107,12 @@ body::before {
 }
 
 .logo-icon {
-  font-size: 1.75rem;
-  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   filter: drop-shadow(0 2px 8px rgba(139, 92, 246, 0.4));
   animation: pulse-glow 2s ease-in-out infinite;
+  object-fit: contain;
 }
 
 @keyframes pulse-glow {
