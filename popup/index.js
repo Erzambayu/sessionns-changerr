@@ -1224,6 +1224,17 @@
               await popupService.importSessions(file);
               modalManager.hideExportImportModal();
               renderSessionList();
+              // Show success notification
+              const successDiv = document.createElement('div');
+              successDiv.className = 'import-success-toast';
+              successDiv.innerHTML = '✅ Import berhasil! Data telah di-restore.';
+              successDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#10b981,#059669);color:white;padding:12px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(16,185,129,0.4);animation:slideIn 0.3s ease;';
+              document.body.appendChild(successDiv);
+              setTimeout(() => {
+                successDiv.style.opacity = '0';
+                successDiv.style.transition = 'opacity 0.3s';
+                setTimeout(() => successDiv.remove(), 300);
+              }, 2500);
             } catch (error) {
               modalManager.showErrorModal(handleError(error, "Import Sessions"));
             }
