@@ -372,7 +372,11 @@
   var SessionList = class {
     constructor(container) {
       this.container = container;
-      this.container.addEventListener("click", this.handleClick.bind(this));
+      if (this.container) {
+        this.container.addEventListener("click", this.handleClick.bind(this));
+      } else {
+        console.error("SessionList: container element not found");
+      }
     }
     setEventHandlers(handlers) {
       this.onSessionClick = handlers.onSessionClick;
@@ -380,6 +384,10 @@
       this.onDeleteClick = handlers.onDeleteClick;
     }
     render(sessions, activeSessions, currentDomain, searchQuery = "") {
+      if (!this.container) {
+        console.error("SessionList: Cannot render, container is null");
+        return;
+      }
       let domainSessions = sessions.filter((s) => s.domain === currentDomain).sort((a, b) => a.order - b.order);
 
       // Apply search filter
@@ -884,11 +892,44 @@
 
   // src/popup/index.ts
   document.addEventListener("DOMContentLoaded", async () => {
-    const popupService = new PopupService();
-    const modalManager = new ModalManager();
-    const loadingManager = new LoadingManager();
-    const sessionList = new SessionList(getElementByIdSafe("sessionsList"));
+    let popupService;
+    let modalManager;
+    let loadingManager;
+    let sessionList;
     let currentSearchQuery = "";
+
+    // Initialize core services first with error handling
+    try {
+      popupService = new PopupService();
+      modalManager = new ModalManager();
+      loadingManager = new LoadingManager();
+      
+      const sessionsListEl = getElementByIdSafe("sessionsList");
+      if (!sessionsListEl) {
+        console.error("Critical: sessionsList element not found in DOM");
+        document.body.innerHTML = `
+          <div class="app-container" style="height: auto; min-height: 200px; justify-content: center;">
+            <div class="empty-state">
+              <div class="empty-icon">⚠️</div>
+              <p>Extension failed to load. Please reinstall.</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      sessionList = new SessionList(sessionsListEl);
+    } catch (initError) {
+      console.error("Critical initialization error:", initError);
+      document.body.innerHTML = `
+        <div class="app-container" style="height: auto; min-height: 200px; justify-content: center;">
+          <div class="empty-state">
+            <div class="empty-icon">❌</div>
+            <p>Extension failed to initialize. Error: ${initError.message || 'Unknown error'}</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
 
     // Initialize UI
     try {
@@ -915,7 +956,19 @@
       renderSessionList();
     } catch (error) {
       console.error("Failed to initialize popup:", error);
-      modalManager.showErrorModal("Failed to initialize extension. Please try reloading.");
+      if (modalManager) {
+        modalManager.showErrorModal("Failed to initialize extension. Please try reloading.");
+      } else {
+        document.body.innerHTML = `
+          <div class="app-container" style="height: auto; min-height: 200px; justify-content: center;">
+            <div class="empty-state">
+              <div class="empty-icon">❌</div>
+              <p>Failed to initialize extension. Please try reloading.</p>
+            </div>
+          </div>
+        `;
+      }
+      return;
     }
 
     // Search functionality

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.3.0-8b5cf6?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.3.1-8b5cf6?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)
 
@@ -39,10 +39,6 @@ Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, sepert
 
 ---
 
-</div>
-
----
-
 ## ✨ Features
 
 - 🔐 **Session Management** - Simpan dan switch antar session dengan sekali klik
@@ -57,56 +53,118 @@ Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, sepert
 
 ## 🖥️ Installation
 
-### Dari Source (Developer Mode)
+### 📥 Langkah 1: Download Source Code
 
-1. **Download** repository ini atau clone:
-   ```bash
-   git clone https://github.com/Erzambayu/sessionns-changerr.git
-   ```
+**Opsi A - Download ZIP (Mudah):**
+1. Buka repository: https://github.com/Erzambayu/sessionns-changerr
+2. Klik tombol hijau **`<> Code`** di kanan atas
+3. Pilih **`Download ZIP`**
+4. Extract file ZIP ke folder yang mudah diakses (misal: `D:\Extensions\session-switcher2`)
 
-2. Buka **Chrome** dan navigasi ke `chrome://extensions/`
+**Opsi B - Clone dengan Git (Developer):**
+```bash
+git clone https://github.com/Erzambayu/sessionns-changerr.git
+```
 
-3. Aktifkan **Developer mode** (toggle di kanan atas)
+---
 
-4. Klik **Load unpacked** dan pilih folder proyek
+### 🔧 Langkah 2: Aktifkan Developer Mode di Chrome
 
-5. Extension siap digunakan! 🎉
+1. Buka browser **Google Chrome**
+2. Ketik di address bar: `chrome://extensions/` lalu tekan **Enter**
+3. Di pojok **kanan atas**, aktifkan toggle **"Developer mode"** (geser ke ON)
+
+![Developer Mode](https://user-images.githubusercontent.com/placeholder/developer-mode.png)
+
+---
+
+### 📂 Langkah 3: Load Extension
+
+1. Setelah Developer mode aktif, akan muncul 3 tombol baru di kiri atas
+2. Klik tombol **"Load unpacked"**
+3. Pilih folder hasil extract/clone tadi (folder yang berisi file `manifest.json`)
+4. Klik **"Select Folder"**
+
+---
+
+### ✅ Langkah 4: Verifikasi Instalasi
+
+1. Extension **"Session Switcher 2"** akan muncul di daftar extensions
+2. Pastikan toggle di extension sudah **ON** (biru)
+3. Icon extension (🔄) akan muncul di toolbar Chrome
+
+**💡 Tips:** Jika tidak terlihat, klik icon puzzle 🧩 di toolbar → Pin extension Session Switcher
+
+---
+
+### 🔄 Update Extension
+
+Jika ada update baru:
+1. Download/pull versi terbaru
+2. Buka `chrome://extensions/`
+3. Klik tombol **refresh** (🔄) pada Session Switcher 2
+4. Atau klik **"Remove"**, lalu **"Load unpacked"** lagi
 
 ---
 
 ## 🚀 Usage
 
-### Save Session
-1. Login ke akun Anda pada website manapun
-2. Klik icon **Session Switcher** di toolbar
-3. Klik menu (⋮) → **Save Session**
-4. Beri nama session dan klik **Save**
+### 💾 Menyimpan Session (Save Session)
 
-### Switch Session
-1. Klik icon **Session Switcher**
-2. Pilih session yang ingin digunakan
-3. Halaman akan reload otomatis dengan session baru
+1. **Login** ke akun Anda di website manapun (contoh: Instagram, Twitter, Gmail)
+2. Klik icon **Session Switcher 🔄** di toolbar Chrome
+3. Klik tombol menu **⋮** (titik tiga vertikal) di pojok kanan atas
+4. Pilih **"💾 Save Session"**
+5. Beri **nama** untuk session (contoh: "Akun Pribadi", "Akun Kerja")
+6. Klik tombol **"Save Session"**
 
-### New Session (Logout)
-1. Klik menu (⋮) → **New Session**
-2. Cookies dan storage akan dibersihkan
-3. Anda bisa login dengan akun berbeda
-
-### Export/Import
-- **Export**: Backup session ke file JSON
-- **Import**: Restore session dari backup file
+✅ Session berhasil disimpan!
 
 ---
 
-## 📸 Screenshots
+### 🔀 Mengganti Session (Switch Session)
 
-<div align="center">
+1. Klik icon **Session Switcher 🔄**
+2. Anda akan melihat daftar session yang tersimpan
+3. **Klik session** yang ingin digunakan
+4. Halaman akan **reload otomatis** dengan akun yang dipilih
 
-| Main Interface | Session List |
-|:---:|:---:|
-| Modern dark UI dengan glassmorphism | Daftar session dengan quick actions |
+💡 Session yang aktif ditandai dengan **garis hijau** di sebelah kiri
 
-</div>
+---
+
+### ➕ Membuat Session Baru (New Session)
+
+Untuk logout dan login dengan akun berbeda:
+
+1. Klik icon **Session Switcher 🔄**
+2. Klik menu **⋮** → **"➕ New Session"**
+3. Konfirmasi dengan klik **"Create Session"**
+4. Halaman akan reload dalam keadaan logout
+5. Login dengan akun baru, lalu simpan sebagai session baru
+
+---
+
+### ✏️ Edit & Hapus Session
+
+- **Edit:** Hover session → Klik ✏️ → Ubah nama/urutan → Save
+- **Hapus:** Hover session → Klik 🗑️ → Konfirmasi delete
+
+---
+
+### 📤 Export & Import Session
+
+**Export (Backup):**
+1. Klik menu **⋮** → **"📤 Export/Import"**
+2. Pilih opsi (Current Site / All Data)
+3. Klik **"Download JSON"**
+4. File backup akan terdownload
+
+**Import (Restore):**
+1. Klik menu **⋮** → **"📤 Export/Import"**
+2. Klik tab **"Import"**
+3. Pilih file backup JSON
+4. Klik **"Restore Data"**
 
 ---
 
@@ -121,14 +179,37 @@ Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, sepert
 
 ## ⚠️ Known Limitations
 
-- **WhatsApp Web** - Disabled untuk mencegah performance issues
+- **WhatsApp Web** - Disabled untuk mencegah performance issues (data terlalu besar)
 - **chrome:// pages** - Extension tidak bisa digunakan pada halaman internal Chrome
+- **Incognito Mode** - Perlu izin khusus di settings extension
+
+---
+
+## 🐛 Troubleshooting
+
+### Popup tidak terbuka?
+1. Buka `chrome://extensions/`
+2. Klik tombol **refresh** (🔄) pada extension
+3. Jika masih error, **Remove** dan **Load unpacked** lagi
+
+### Session tidak tersimpan?
+- Pastikan halaman sudah fully loaded sebelum save
+- Beberapa website memiliki proteksi yang mencegah saving
+
+### Error saat switch session?
+- Refresh halaman dan coba lagi
+- Hapus session lama dan buat ulang
 
 ---
 
 ## 📝 Changelog
 
-### v1.3.0 (Current)
+### v1.3.1 (Current)
+- 🐛 Fix null check bug pada SessionList
+- 🛡️ Improved error handling saat inisialisasi
+- 📝 Updated README dengan panduan lengkap
+
+### v1.3.0
 - 🎨 Complete UI/UX overhaul dengan dark mode
 - 💎 Glassmorphism design
 - ✨ Smooth animations & micro-interactions

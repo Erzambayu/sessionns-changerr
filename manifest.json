@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Session Switcher 2",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "A Chrome extension for switching between sessions (fork)",
 
   "permissions": ["storage", "tabs", "cookies", "activeTab", "scripting", "unlimitedStorage"],

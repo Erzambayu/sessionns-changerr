@@ -1,298 +1,321 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Session Switcher</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="app-container">
-      <header class="app-header">
-        <div class="brand">
-          <img class="logo-icon" src="../assets/icons/icon-48.png" alt="Session Switcher">
-          <div class="brand-info">
-            <h1>Session Switcher</h1>
-            <div class="current-domain" id="currentSite">Loading...</div>
-          </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Session Switcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="brand">
+        <img class="logo-icon" src="../assets/icons/icon-48.png" alt="Session Switcher">
+        <div class="brand-info">
+          <h1>Session Switcher</h1>
+          <div class="current-domain" id="currentSite">Loading...</div>
         </div>
-        <div class="header-actions">
-          <button id="viewModeBtn" class="icon-btn" title="Toggle View">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </div>
+      <div class="header-actions">
+        <button id="viewModeBtn" class="icon-btn" title="Toggle View">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+        </button>
+        <div class="dropdown-container">
+          <button id="menuBtn" class="icon-btn" title="Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="12" cy="5" r="1"></circle>
+              <circle cx="12" cy="19" r="1"></circle>
+            </svg>
           </button>
-          <div class="dropdown-container">
-            <button id="menuBtn" class="icon-btn" title="Menu">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+          <div id="menuDropdown" class="dropdown-menu">
+            <button id="saveBtn" class="dropdown-item">
+              <span class="icon">💾</span> Save Session
             </button>
-            <div id="menuDropdown" class="dropdown-menu">
-              <button id="saveBtn" class="dropdown-item">
-                <span class="icon">💾</span> Save Session
-              </button>
-              <button id="newSessionBtn" class="dropdown-item">
-                <span class="icon">➕</span> New Session
-              </button>
-              <div class="divider"></div>
-              <button id="clearSessionBtn" class="dropdown-item">
-                <span class="icon">🧹</span> Clear Session
-              </button>
-              <button id="exportImportBtn" class="dropdown-item">
-                <span class="icon">📤</span> Export/Import
-              </button>
-              <div class="divider"></div>
-              <button id="aboutBtn" class="dropdown-item">
-                <span class="icon">ℹ️</span> About
-              </button>
+            <button id="newSessionBtn" class="dropdown-item">
+              <span class="icon">➕</span> New Session
+            </button>
+            <div class="divider"></div>
+            <button id="clearSessionBtn" class="dropdown-item">
+              <span class="icon">🧹</span> Clear Session
+            </button>
+            <button id="exportImportBtn" class="dropdown-item">
+              <span class="icon">📤</span> Export/Import
+            </button>
+            <div class="divider"></div>
+            <button id="aboutBtn" class="dropdown-item">
+              <span class="icon">ℹ️</span> About
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="search-container">
+      <div class="search-box">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchSessions" placeholder="Search sessions..." autocomplete="off">
+      </div>
+    </div>
+
+    <main class="app-content">
+      <div id="sessionsList" class="sessions-list">
+        <!-- Sessions will be injected here -->
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <p>No sessions saved for this site</p>
+          <button id="createFirstSessionBtn" class="btn btn-primary btn-sm">Save Current Session</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="status-bar">
+        <span id="sessionCount">0 sessions</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modals -->
+  <div id="saveModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Save Session</h3>
+        <button id="closeSaveModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="sessionName">Session Name</label>
+          <input type="text" id="sessionName" placeholder="e.g. Personal, Work, Testing" value="Unnamed Session" />
+        </div>
+        <div class="form-group">
+          <label for="sessionOrder">Order Priority</label>
+          <input type="number" id="sessionOrder" placeholder="1" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelSave" class="btn btn-secondary">Cancel</button>
+        <button id="confirmSave" class="btn btn-primary">Save Session</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="renameModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Edit Session</h3>
+        <button id="closeRenameModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="newSessionName">Session Name</label>
+          <input type="text" id="newSessionName" placeholder="Enter new name" />
+        </div>
+        <div class="form-group">
+          <label for="newSessionOrder">Order Priority</label>
+          <input type="number" id="newSessionOrder" placeholder="Enter new order" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="replaceSessionBtn" class="btn btn-warning">Update with Current Data</button>
+        <button id="cancelRename" class="btn btn-secondary">Cancel</button>
+        <button id="confirmRename" class="btn btn-primary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Delete Session</h3>
+        <button id="closeDeleteModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-icon delete">🗑️</div>
+        <p>Are you sure you want to delete <strong id="deleteSessionName"></strong>?</p>
+        <p class="text-muted">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelDelete" class="btn btn-secondary">Cancel</button>
+        <button id="confirmDelete" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="errorModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3 class="text-danger">Error</h3>
+        <button id="closeErrorModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="error-message" id="errorMessage">An unexpected error occurred.</div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeErrorModalBtn" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="aboutModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>About</h3>
+        <button id="closeAboutModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="logo-large">🔄</div>
+        <h4>Session Switcher 2</h4>
+        <p class="version">v1.3.0 (Modern UI)</p>
+        <p class="description">Manage multiple accounts on the same website with ease. Secure, local, and fast.</p>
+        <div class="links">
+          <a href="https://github.com/Erzambayu/sessionns-changerr" target="_blank" class="link-btn">GitHub</a>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeAboutModalBtn" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="newSessionConfirmModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>New Session</h3>
+        <button id="closeNewSessionConfirmModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-icon new">✨</div>
+        <p>Create a fresh session?</p>
+        <p class="text-muted">This will clear current cookies and storage to start fresh. Your saved sessions are safe.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelNewSession" class="btn btn-secondary">Cancel</button>
+        <button id="confirmNewSession" class="btn btn-primary">Create Session</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="clearSessionModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Clear Data</h3>
+        <button id="closeClearSessionModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Select what to clear:</p>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="clearOption" value="current" checked>
+            <div class="radio-content">
+              <span class="radio-title">Current Site Only</span>
+              <span class="radio-desc">Remove sessions for this domain</span>
             </div>
-          </div>
-        </div>
-      </header>
-
-      <div class="search-container">
-        <div class="search-box">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="searchSessions" placeholder="Search sessions..." autocomplete="off">
-        </div>
-      </div>
-
-      <main class="app-content">
-        <div id="sessionsList" class="sessions-list">
-          <!-- Sessions will be injected here -->
-          <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <p>No sessions saved for this site</p>
-            <button id="createFirstSessionBtn" class="btn btn-primary btn-sm">Save Current Session</button>
-          </div>
-        </div>
-      </main>
-
-      <footer class="app-footer">
-        <div class="status-bar">
-          <span id="sessionCount">0 sessions</span>
-        </div>
-      </footer>
-    </div>
-
-    <!-- Modals -->
-    <div id="saveModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>Save Session</h3>
-          <button id="closeSaveModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="sessionName">Session Name</label>
-            <input type="text" id="sessionName" placeholder="e.g. Personal, Work, Testing" value="Unnamed Session" />
-          </div>
-          <div class="form-group">
-            <label for="sessionOrder">Order Priority</label>
-            <input type="number" id="sessionOrder" placeholder="1" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="cancelSave" class="btn btn-secondary">Cancel</button>
-          <button id="confirmSave" class="btn btn-primary">Save Session</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="renameModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>Edit Session</h3>
-          <button id="closeRenameModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="newSessionName">Session Name</label>
-            <input type="text" id="newSessionName" placeholder="Enter new name" />
-          </div>
-          <div class="form-group">
-            <label for="newSessionOrder">Order Priority</label>
-            <input type="number" id="newSessionOrder" placeholder="Enter new order" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="replaceSessionBtn" class="btn btn-warning">Update with Current Data</button>
-          <button id="cancelRename" class="btn btn-secondary">Cancel</button>
-          <button id="confirmRename" class="btn btn-primary">Save Changes</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="deleteModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>Delete Session</h3>
-          <button id="closeDeleteModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="confirm-icon delete">🗑️</div>
-          <p>Are you sure you want to delete <strong id="deleteSessionName"></strong>?</p>
-          <p class="text-muted">This action cannot be undone.</p>
-        </div>
-        <div class="modal-footer">
-          <button id="cancelDelete" class="btn btn-secondary">Cancel</button>
-          <button id="confirmDelete" class="btn btn-danger">Delete</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="errorModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3 class="text-danger">Error</h3>
-          <button id="closeErrorModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="error-message" id="errorMessage">An unexpected error occurred.</div>
-        </div>
-        <div class="modal-footer">
-          <button id="closeErrorModalBtn" class="btn btn-secondary">Close</button>
-        </div>
-      </div>
-    </div>
-    
-    <div id="aboutModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>About</h3>
-          <button id="closeAboutModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body text-center">
-          <div class="logo-large">🔄</div>
-          <h4>Session Switcher 2</h4>
-          <p class="version">v1.3.0 (Modern UI)</p>
-          <p class="description">Manage multiple accounts on the same website with ease. Secure, local, and fast.</p>
-          <div class="links">
-            <a href="https://github.com/Erzambayu/sessionns-changerr" target="_blank" class="link-btn">GitHub</a>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="closeAboutModalBtn" class="btn btn-primary">Close</button>
-        </div>
-      </div>
-    </div>
-    
-    <div id="newSessionConfirmModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>New Session</h3>
-          <button id="closeNewSessionConfirmModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="confirm-icon new">✨</div>
-          <p>Create a fresh session?</p>
-          <p class="text-muted">This will clear current cookies and storage to start fresh. Your saved sessions are safe.</p>
-        </div>
-        <div class="modal-footer">
-          <button id="cancelNewSession" class="btn btn-secondary">Cancel</button>
-          <button id="confirmNewSession" class="btn btn-primary">Create Session</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="clearSessionModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>Clear Data</h3>
-          <button id="closeClearSessionModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p>Select what to clear:</p>
-          <div class="radio-group">
-            <label class="radio-option">
-              <input type="radio" name="clearOption" value="current" checked>
-              <div class="radio-content">
-                <span class="radio-title">Current Site Only</span>
-                <span class="radio-desc">Remove sessions for this domain</span>
-              </div>
-            </label>
-            <label class="radio-option">
-              <input type="radio" name="clearOption" value="all">
-              <div class="radio-content">
-                <span class="radio-title">All Sites</span>
-                <span class="radio-desc">Remove all saved sessions everywhere</span>
-              </div>
-            </label>
-          </div>
-
-        </div>
-        <div class="modal-footer">
-          <button id="cancelClearSession" class="btn btn-secondary">Cancel</button>
-          <button id="confirmClearSession" class="btn btn-danger">Clear Data</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="exportImportModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>Data Management</h3>
-          <button id="closeExportImportModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="tabs">
-            <button id="exportTabBtn" class="tab-btn active">Export</button>
-            <button id="importTabBtn" class="tab-btn">Import</button>
-          </div>
-          <div class="tab-content-container">
-            <div id="exportTab" class="tab-pane active">
-              <div class="radio-group">
-                <label class="radio-option">
-                  <input type="radio" name="exportOption" value="current" checked>
-                  <div class="radio-content">
-                    <span class="radio-title">Current Site</span>
-                  </div>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="exportOption" value="all">
-                  <div class="radio-content">
-                    <span class="radio-title">All Data</span>
-                  </div>
-                </label>
-              </div>
-
-              <button id="exportBtn" class="btn btn-primary full-width">Download JSON</button>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="clearOption" value="all">
+            <div class="radio-content">
+              <span class="radio-title">All Sites</span>
+              <span class="radio-desc">Remove all saved sessions everywhere</span>
             </div>
-            <div id="importTab" class="tab-pane">
-              <div class="file-upload-area">
-                <input type="file" id="importFileInput" accept=".json">
-                <div class="upload-placeholder">
-                  <span class="icon">📂</span>
-                  <span>Click to select backup file</span>
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button id="cancelClearSession" class="btn btn-secondary">Cancel</button>
+        <button id="confirmClearSession" class="btn btn-danger">Clear Data</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="exportImportModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Data Management</h3>
+        <button id="closeExportImportModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button id="exportTabBtn" class="tab-btn active">Export</button>
+          <button id="importTabBtn" class="tab-btn">Import</button>
+        </div>
+        <div class="tab-content-container">
+          <div id="exportTab" class="tab-pane active">
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="exportOption" value="current" checked>
+                <div class="radio-content">
+                  <span class="radio-title">Current Site</span>
                 </div>
-              </div>
-              <button id="importBtn" class="btn btn-primary full-width" disabled>Restore Data</button>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="exportOption" value="all">
+                <div class="radio-content">
+                  <span class="radio-title">All Data</span>
+                </div>
+              </label>
             </div>
+
+            <button id="exportBtn" class="btn btn-primary full-width">Download JSON</button>
+          </div>
+          <div id="importTab" class="tab-pane">
+            <div class="file-upload-area">
+              <input type="file" id="importFileInput" accept=".json">
+              <div class="upload-placeholder">
+                <span class="icon">📂</span>
+                <span>Click to select backup file</span>
+              </div>
+            </div>
+            <button id="importBtn" class="btn btn-primary full-width" disabled>Restore Data</button>
           </div>
         </div>
-        <div class="modal-footer">
-          <button id="closeExportImportModalBtn" class="btn btn-secondary">Close</button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeExportImportModalBtn" class="btn btn-secondary">Close</button>
       </div>
     </div>
-    
-    <div id="replaceConfirmModal" class="modal">
-      <div class="modal-content bounce-in">
-        <div class="modal-header">
-          <h3>Update Session</h3>
-          <button id="closeReplaceConfirmModal" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="confirm-icon update">🔄</div>
-          <p>Update <strong id="replaceSessionName"></strong> with current data?</p>
-          <p class="text-muted">The old session data will be overwritten.</p>
-        </div>
-        <div class="modal-footer">
-          <button id="cancelReplaceConfirm" class="btn btn-secondary">Cancel</button>
-          <button id="confirmReplaceSession" class="btn btn-primary">Update</button>
-        </div>
+  </div>
+
+  <div id="replaceConfirmModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Update Session</h3>
+        <button id="closeReplaceConfirmModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="confirm-icon update">🔄</div>
+        <p>Update <strong id="replaceSessionName"></strong> with current data?</p>
+        <p class="text-muted">The old session data will be overwritten.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelReplaceConfirm" class="btn btn-secondary">Cancel</button>
+        <button id="confirmReplaceSession" class="btn btn-primary">Update</button>
       </div>
     </div>
-    <script src="index.js"></script>
-  </body>
+  </div>
+  <script src="index.js"></script>
+</body>
+
 </html>
