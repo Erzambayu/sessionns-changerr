@@ -74,8 +74,6 @@ git clone https://github.com/Erzambayu/sessionns-changerr.git
 2. Ketik di address bar: `chrome://extensions/` lalu tekan **Enter**
 3. Di pojok **kanan atas**, aktifkan toggle **"Developer mode"** (geser ke ON)
 
-![Developer Mode](https://user-images.githubusercontent.com/placeholder/developer-mode.png)
-
 ---
 
 ### 📂 Langkah 3: Load Extension
