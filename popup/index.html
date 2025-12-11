@@ -14,6 +14,7 @@
 </head>
 
 <body>
+  <script src="../libs/jszip.min.js"></script>
   <div class="app-container">
     <header class="app-header">
       <div class="brand">
@@ -186,7 +187,7 @@
       <div class="modal-body text-center">
         <div class="logo-large">🔄</div>
         <h4>Session Switcher 2</h4>
-        <p class="version">v1.3.0 (Modern UI)</p>
+        <p class="version">v1.3.1 (Modern UI)</p>
         <p class="description">Manage multiple accounts on the same website with ease. Secure, local, and fast.</p>
         <div class="links">
           <a href="https://github.com/Erzambayu/sessionns-changerr" target="_blank" class="link-btn">GitHub</a>
@@ -241,7 +242,6 @@
             </div>
           </label>
         </div>
-
       </div>
       <div class="modal-footer">
         <button id="cancelClearSession" class="btn btn-secondary">Cancel</button>
@@ -277,15 +277,30 @@
                 </div>
               </label>
             </div>
-
-            <button id="exportBtn" class="btn btn-primary full-width">Download JSON</button>
+            <div class="radio-group" style="margin-top: 10px;">
+              <label class="radio-option">
+                <input type="radio" name="exportFormat" value="json" checked>
+                <div class="radio-content">
+                  <span class="radio-title">📄 JSON</span>
+                  <span class="radio-desc">Standard format</span>
+                </div>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="exportFormat" value="zip">
+                <div class="radio-content">
+                  <span class="radio-title">📦 ZIP</span>
+                  <span class="radio-desc">Compressed format</span>
+                </div>
+              </label>
+            </div>
+            <button id="exportBtn" class="btn btn-primary full-width">Download Backup</button>
           </div>
           <div id="importTab" class="tab-pane">
             <div class="file-upload-area">
-              <input type="file" id="importFileInput" accept=".json">
+              <input type="file" id="importFileInput" accept=".json,.zip">
               <div class="upload-placeholder">
                 <span class="icon">📂</span>
-                <span>Click to select backup file</span>
+                <span>Click to select backup file (.json or .zip)</span>
               </div>
             </div>
             <button id="importBtn" class="btn btn-primary full-width" disabled>Restore Data</button>

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.3.1-8b5cf6?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.3.2-8b5cf6?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)
 
@@ -154,14 +154,17 @@ Untuk logout dan login dengan akun berbeda:
 
 **Export (Backup):**
 1. Klik menu **⋮** → **"📤 Export/Import"**
-2. Pilih opsi (Current Site / All Data)
-3. Klik **"Download JSON"**
-4. File backup akan terdownload
+2. Pilih data yang akan di-export (Current Site / All Data)
+3. Pilih format:
+   - **📄 JSON** - Format standar, ukuran lebih besar
+   - **📦 ZIP** - Format terkompresi, ukuran lebih kecil
+4. Klik **"Download Backup"**
+5. File backup akan terdownload
 
 **Import (Restore):**
 1. Klik menu **⋮** → **"📤 Export/Import"**
 2. Klik tab **"Import"**
-3. Pilih file backup JSON
+3. Pilih file backup (**.json** atau **.zip**)
 4. Klik **"Restore Data"**
 
 ---
@@ -202,7 +205,12 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 📝 Changelog
 
-### v1.3.1 (Current)
+### v1.3.2 (Current)
+- 📦 Added ZIP backup format support (export & import)
+- 💾 Choose between JSON or ZIP for backups
+- 📚 JSZip library integration
+
+### v1.3.1
 - 🐛 Fix null check bug pada SessionList
 - 🛡️ Improved error handling saat inisialisasi
 - 📝 Updated README dengan panduan lengkap

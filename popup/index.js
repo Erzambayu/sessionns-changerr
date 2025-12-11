@@ -308,6 +308,10 @@
       const radio = document.querySelector('input[name="exportOption"]:checked');
       return radio ? radio.value : "current";
     }
+    getExportFormat() {
+      const radio = document.querySelector('input[name="exportFormat"]:checked');
+      return radio ? radio.value : "json";
+    }
     setupTabSystem() {
       const exportTabBtn = document.getElementById("exportTabBtn");
       const importTabBtn = document.getElementById("importTabBtn");
@@ -861,31 +865,51 @@
       }
     }
     async importSessions(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          try {
-            const content = e.target?.result;
-            if (typeof content !== "string") {
-              throw new Error("Invalid file content");
+      return new Promise(async (resolve, reject) => {
+        try {
+          let jsonContent;
+
+          // Check if file is ZIP
+          if (file.name.endsWith('.zip')) {
+            if (typeof JSZip === "undefined") {
+              throw new Error("JSZip library not loaded");
             }
-            const importData = JSON.parse(content);
-            if (!importData.sessions || !Array.isArray(importData.sessions)) {
-              throw new Error("Invalid import data format");
+            const zip = await JSZip.loadAsync(file);
+            // Find the JSON file inside ZIP
+            const jsonFile = zip.file("sessions-backup.json") || zip.file(/\.json$/i)[0];
+            if (!jsonFile) {
+              throw new Error("No JSON file found in ZIP archive");
             }
-            const importedSessions = importData.sessions.map((s) => ({
-              ...s,
-              id: generateId() // Regenerate IDs to avoid conflicts
-            }));
-            this.state.sessions.push(...importedSessions);
-            await this.saveStorageData();
-            resolve();
-          } catch (error) {
-            reject(error);
+            jsonContent = await jsonFile.async("string");
+          } else {
+            // Read as plain text (JSON)
+            jsonContent = await new Promise((res, rej) => {
+              const reader = new FileReader();
+              reader.onload = (e) => res(e.target?.result);
+              reader.onerror = () => rej(new Error("Error reading file"));
+              reader.readAsText(file);
+            });
           }
-        };
-        reader.onerror = () => reject(new Error("Error reading file"));
-        reader.readAsText(file);
+
+          if (typeof jsonContent !== "string") {
+            throw new Error("Invalid file content");
+          }
+
+          const importData = JSON.parse(jsonContent);
+          if (!importData.sessions || !Array.isArray(importData.sessions)) {
+            throw new Error("Invalid import data format");
+          }
+
+          const importedSessions = importData.sessions.map((s) => ({
+            ...s,
+            id: generateId() // Regenerate IDs to avoid conflicts
+          }));
+          this.state.sessions.push(...importedSessions);
+          await this.saveStorageData();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
       });
     }
   };
@@ -903,7 +927,7 @@
       popupService = new PopupService();
       modalManager = new ModalManager();
       loadingManager = new LoadingManager();
-      
+
       const sessionsListEl = getElementByIdSafe("sessionsList");
       if (!sessionsListEl) {
         console.error("Critical: sessionsList element not found in DOM");
@@ -1151,19 +1175,41 @@
         }
       },
       {
-        id: "exportBtn", handler: () => {
+        id: "exportBtn", handler: async () => {
           try {
             const option = modalManager.getExportOption();
+            const format = modalManager.getExportFormat();
             const json = popupService.exportSessions(option);
-            const blob = new Blob([json], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `sessions-backup-${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const dateStr = new Date().toISOString().slice(0, 10);
+
+            if (format === "zip") {
+              // Export as ZIP using JSZip
+              if (typeof JSZip === "undefined") {
+                throw new Error("JSZip library not loaded");
+              }
+              const zip = new JSZip();
+              zip.file("sessions-backup.json", json);
+              const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `sessions-backup-${dateStr}.zip`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            } else {
+              // Export as JSON
+              const blob = new Blob([json], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `sessions-backup-${dateStr}.json`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }
           } catch (error) {
             modalManager.showErrorModal(handleError(error, "Export Sessions"));
           }
