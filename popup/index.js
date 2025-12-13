@@ -112,14 +112,20 @@
         newSessionConfirm: getElementByIdSafe("newSessionConfirmModal"),
         clearSession: getElementByIdSafe("clearSessionModal"),
         exportImport: getElementByIdSafe("exportImportModal"),
-        replaceConfirm: getElementByIdSafe("replaceConfirmModal")
+        replaceConfirm: getElementByIdSafe("replaceConfirmModal"),
+        pinSetup: getElementByIdSafe("pinSetupModal"),
+        pinVerify: getElementByIdSafe("pinVerifyModal"),
+        securitySettings: getElementByIdSafe("securitySettingsModal")
       };
       this.inputs = {
         sessionName: getElementByIdSafe("sessionName"),
         sessionOrder: getElementByIdSafe("sessionOrder"),
         newSessionName: getElementByIdSafe("newSessionName"),
         newSessionOrder: getElementByIdSafe("newSessionOrder"),
-        importFileInput: getElementByIdSafe("importFileInput")
+        importFileInput: getElementByIdSafe("importFileInput"),
+        pinSetupInput: getElementByIdSafe("pinSetupInput"),
+        pinConfirmInput: getElementByIdSafe("pinConfirmInput"),
+        pinVerifyInput: getElementByIdSafe("pinVerifyInput")
       };
       this.setupEventListeners();
       this.setupTabSystem();
@@ -143,7 +149,13 @@
         { id: "closeExportImportModal", modal: "exportImport" },
         { id: "closeExportImportModalBtn", modal: "exportImport" },
         { id: "closeReplaceConfirmModal", modal: "replaceConfirm" },
-        { id: "cancelReplaceConfirm", modal: "replaceConfirm" }
+        { id: "cancelReplaceConfirm", modal: "replaceConfirm" },
+        { id: "closePinSetupModal", modal: "pinSetup" },
+        { id: "cancelPinSetup", modal: "pinSetup" },
+        { id: "closePinVerifyModal", modal: "pinVerify" },
+        { id: "cancelPinVerify", modal: "pinVerify" },
+        { id: "closeSecuritySettingsModal", modal: "securitySettings" },
+        { id: "closeSecuritySettingsBtn", modal: "securitySettings" }
       ];
       closeButtons.forEach(({ id, modal }) => {
         const el = getElementByIdSafe(id);
@@ -278,6 +290,52 @@
     }
     hideReplaceConfirmModal() {
       this.hide("replaceConfirm");
+    }
+    // PIN Modal Methods
+    showPinSetupModal() {
+      if (this.inputs.pinSetupInput) this.inputs.pinSetupInput.value = "";
+      if (this.inputs.pinConfirmInput) this.inputs.pinConfirmInput.value = "";
+      const errorEl = document.getElementById("pinSetupError");
+      if (errorEl) errorEl.textContent = "";
+      this.show("pinSetup");
+      if (this.inputs.pinSetupInput) this.inputs.pinSetupInput.focus();
+    }
+    hidePinSetupModal() {
+      this.hide("pinSetup");
+    }
+    showPinVerifyModal() {
+      if (this.inputs.pinVerifyInput) this.inputs.pinVerifyInput.value = "";
+      const errorEl = document.getElementById("pinVerifyError");
+      if (errorEl) errorEl.textContent = "";
+      this.show("pinVerify");
+      if (this.inputs.pinVerifyInput) this.inputs.pinVerifyInput.focus();
+    }
+    hidePinVerifyModal() {
+      this.hide("pinVerify");
+    }
+    showSecuritySettingsModal() {
+      this.show("securitySettings");
+      if (this.modals.securitySettings) this.modals.securitySettings.focus();
+    }
+    hideSecuritySettingsModal() {
+      this.hide("securitySettings");
+    }
+    getPinSetupInput() {
+      return {
+        pin: this.inputs.pinSetupInput ? this.inputs.pinSetupInput.value : "",
+        confirm: this.inputs.pinConfirmInput ? this.inputs.pinConfirmInput.value : ""
+      };
+    }
+    getPinVerifyInput() {
+      return this.inputs.pinVerifyInput ? this.inputs.pinVerifyInput.value : "";
+    }
+    showPinSetupError(message) {
+      const errorEl = document.getElementById("pinSetupError");
+      if (errorEl) errorEl.textContent = message;
+    }
+    showPinVerifyError(message) {
+      const errorEl = document.getElementById("pinVerifyError");
+      if (errorEl) errorEl.textContent = message;
     }
     showClearSessionModal() {
       this.show("clearSession");
@@ -506,14 +564,17 @@
     CLEAR_SESSION: "clearSession",
     CLEAR_SESSIONS: "clearSessions",
     EXPORT_SESSIONS: "exportSessions",
-    IMPORT_SESSIONS: "importSessions"
+    IMPORT_SESSIONS: "importSessions",
+    AUTO_REFRESH_SESSION: "autoRefreshSession"
   };
 
   // src/shared/constants/storageKeys.ts
   var STORAGE_KEYS = {
     SESSIONS: "sessions",
     ACTIVE_SESSIONS: "activeSessions",
-    VIEW_MODE: "viewMode"
+    VIEW_MODE: "viewMode",
+    PIN_HASH: "pinHash",
+    PIN_ENABLED: "pinEnabled"
   };
 
   // src/shared/utils/idGenerator.ts
@@ -816,6 +877,124 @@
       this.state.viewMode = mode;
       await this.saveStorageData();
     }
+    async autoRefreshActiveSession() {
+      try {
+        const activeSessionId = this.state.activeSessions[this.state.currentDomain];
+        if (!activeSessionId) {
+          console.log("[Auto Refresh] No active session for this domain, skipping refresh");
+          return null;
+        }
+        const session = this.state.sessions.find((s) => s.id === activeSessionId);
+        if (!session) {
+          console.log("[Auto Refresh] Active session not found in storage");
+          return null;
+        }
+        // Check if session was refreshed recently (within 5 minutes)
+        const REFRESH_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+        const now = Date.now();
+        if (session.lastUsed && (now - session.lastUsed) < REFRESH_COOLDOWN) {
+          console.log("[Auto Refresh] Session was refreshed recently, skipping");
+          return null;
+        }
+        console.log(`[Auto Refresh] Refreshing session "${session.name}" for ${this.state.currentDomain}`);
+        const response = await this.chromeApi.sendMessage({
+          action: MESSAGE_ACTIONS.AUTO_REFRESH_SESSION,
+          domain: this.state.currentDomain,
+          tabId: this.state.currentTab.id,
+          sessionId: activeSessionId
+        });
+        if (response.success) {
+          // Update local state as well
+          session.lastUsed = Date.now();
+          await this.saveStorageData();
+          console.log("[Auto Refresh] Session refreshed successfully");
+          return response.data;
+        } else {
+          console.warn("[Auto Refresh] Failed to refresh session:", response.error);
+          return null;
+        }
+      } catch (error) {
+        console.error("[Auto Refresh] Error refreshing session:", error);
+        return null;
+      }
+    }
+    // PIN Security Functions
+    async hashPin(pin) {
+      // Simple hash using Web Crypto API
+      const encoder = new TextEncoder();
+      const data = encoder.encode(pin + "session_switcher_salt");
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    async setupPin(pin) {
+      try {
+        if (pin.length < 4 || pin.length > 6) {
+          throw new Error("PIN must be 4-6 digits");
+        }
+        if (!/^\d+$/.test(pin)) {
+          throw new Error("PIN must contain only numbers");
+        }
+        const hash = await this.hashPin(pin);
+        await this.chromeApi.setStorageData({
+          [STORAGE_KEYS.PIN_HASH]: hash,
+          [STORAGE_KEYS.PIN_ENABLED]: true
+        });
+        return true;
+      } catch (error) {
+        console.error("Error setting up PIN:", error);
+        throw error;
+      }
+    }
+    async verifyPin(pin) {
+      try {
+        const result = await this.chromeApi.getStorageData([STORAGE_KEYS.PIN_HASH]);
+        const storedHash = result[STORAGE_KEYS.PIN_HASH];
+        if (!storedHash) return false;
+        const inputHash = await this.hashPin(pin);
+        return inputHash === storedHash;
+      } catch (error) {
+        console.error("Error verifying PIN:", error);
+        return false;
+      }
+    }
+    async isPinEnabled() {
+      try {
+        const result = await this.chromeApi.getStorageData([STORAGE_KEYS.PIN_ENABLED]);
+        return result[STORAGE_KEYS.PIN_ENABLED] === true;
+      } catch (error) {
+        return false;
+      }
+    }
+    async isPinSetup() {
+      try {
+        const result = await this.chromeApi.getStorageData([STORAGE_KEYS.PIN_HASH]);
+        return !!result[STORAGE_KEYS.PIN_HASH];
+      } catch (error) {
+        return false;
+      }
+    }
+    async togglePinEnabled(enabled) {
+      try {
+        await this.chromeApi.setStorageData({
+          [STORAGE_KEYS.PIN_ENABLED]: enabled
+        });
+      } catch (error) {
+        console.error("Error toggling PIN:", error);
+        throw error;
+      }
+    }
+    async removePin() {
+      try {
+        await this.chromeApi.setStorageData({
+          [STORAGE_KEYS.PIN_HASH]: null,
+          [STORAGE_KEYS.PIN_ENABLED]: false
+        });
+      } catch (error) {
+        console.error("Error removing PIN:", error);
+        throw error;
+      }
+    }
     async clearSessions(clearOption) {
       try {
         if (clearOption === "current") {
@@ -978,6 +1157,17 @@
         currentSiteEl.title = state.currentDomain;
       }
       renderSessionList();
+
+      // Auto refresh active session in background (non-blocking)
+      popupService.autoRefreshActiveSession().then((result) => {
+        if (result) {
+          console.log("[Auto Refresh] Session updated at:", new Date(result.refreshedAt).toLocaleString());
+          // Reload session list to reflect updated lastUsed time
+          popupService.loadStorageData().then(() => renderSessionList());
+        }
+      }).catch((err) => {
+        console.warn("[Auto Refresh] Background refresh failed:", err);
+      });
     } catch (error) {
       console.error("Failed to initialize popup:", error);
       if (modalManager) {
@@ -1074,6 +1264,21 @@
       { id: "clearSessionBtn", handler: () => modalManager.showClearSessionModal() },
       { id: "exportImportBtn", handler: () => modalManager.showExportImportModal() },
       { id: "aboutBtn", handler: () => modalManager.showAboutModal() },
+      {
+        id: "securityBtn",
+        handler: async () => {
+          // Update toggle state based on current settings
+          const pinEnabled = await popupService.isPinEnabled();
+          const pinSetup = await popupService.isPinSetup();
+          const toggle = document.getElementById("pinEnabledToggle");
+          const pinActions = document.getElementById("pinActions");
+          const noPinMessage = document.getElementById("noPinMessage");
+          if (toggle) toggle.checked = pinEnabled;
+          if (pinActions) pinActions.style.display = pinSetup ? "flex" : "none";
+          if (noPinMessage) noPinMessage.style.display = pinSetup ? "none" : "block";
+          modalManager.showSecuritySettingsModal();
+        }
+      },
 
       // Modal Confirm Actions
       {
@@ -1242,6 +1447,153 @@
         }
       }
     ];
+
+    // PIN Security Handlers
+    const pinEnabledToggle = document.getElementById("pinEnabledToggle");
+    if (pinEnabledToggle) {
+      pinEnabledToggle.addEventListener("change", async (e) => {
+        const isEnabled = e.target.checked;
+        const pinSetup = await popupService.isPinSetup();
+        if (isEnabled && !pinSetup) {
+          // Need to setup PIN first
+          e.target.checked = false;
+          modalManager.hideSecuritySettingsModal();
+          modalManager.showPinSetupModal();
+        } else {
+          await popupService.togglePinEnabled(isEnabled);
+        }
+      });
+    }
+
+    const confirmPinSetupBtn = document.getElementById("confirmPinSetup");
+    if (confirmPinSetupBtn) {
+      confirmPinSetupBtn.addEventListener("click", async () => {
+        const { pin, confirm } = modalManager.getPinSetupInput();
+        if (!pin) {
+          modalManager.showPinSetupError("Please enter a PIN");
+          return;
+        }
+        if (pin.length < 4 || pin.length > 6) {
+          modalManager.showPinSetupError("PIN must be 4-6 digits");
+          return;
+        }
+        if (!/^\d+$/.test(pin)) {
+          modalManager.showPinSetupError("PIN must contain only numbers");
+          return;
+        }
+        if (pin !== confirm) {
+          modalManager.showPinSetupError("PINs do not match");
+          return;
+        }
+        try {
+          await popupService.setupPin(pin);
+          modalManager.hidePinSetupModal();
+          // Show success toast
+          const toast = document.createElement('div');
+          toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#10b981,#059669);color:white;padding:12px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(16,185,129,0.4);';
+          toast.textContent = '🔐 PIN set successfully!';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 2500);
+        } catch (error) {
+          modalManager.showPinSetupError(error.message || "Failed to set PIN");
+        }
+      });
+    }
+
+    // Pending session ID for PIN verification
+    let pendingSessionId = null;
+
+    const confirmPinVerifyBtn = document.getElementById("confirmPinVerify");
+    if (confirmPinVerifyBtn) {
+      confirmPinVerifyBtn.addEventListener("click", async () => {
+        const pin = modalManager.getPinVerifyInput();
+        if (!pin) {
+          modalManager.showPinVerifyError("Please enter your PIN");
+          return;
+        }
+        const isValid = await popupService.verifyPin(pin);
+        if (isValid) {
+          modalManager.hidePinVerifyModal();
+          // Proceed with session switch
+          if (pendingSessionId) {
+            try {
+              await popupService.switchToSession(pendingSessionId);
+              renderSessionList();
+              pendingSessionId = null;
+            } catch (error) {
+              modalManager.showErrorModal(handleError(error, "Switch Session"));
+            }
+          }
+        } else {
+          modalManager.showPinVerifyError("Incorrect PIN");
+        }
+      });
+    }
+
+    const changePinBtn = document.getElementById("changePinBtn");
+    if (changePinBtn) {
+      changePinBtn.addEventListener("click", () => {
+        modalManager.hideSecuritySettingsModal();
+        modalManager.showPinSetupModal();
+      });
+    }
+
+    const removePinBtn = document.getElementById("removePinBtn");
+    if (removePinBtn) {
+      removePinBtn.addEventListener("click", async () => {
+        try {
+          await popupService.removePin();
+          const toggle = document.getElementById("pinEnabledToggle");
+          const pinActions = document.getElementById("pinActions");
+          const noPinMessage = document.getElementById("noPinMessage");
+          if (toggle) toggle.checked = false;
+          if (pinActions) pinActions.style.display = "none";
+          if (noPinMessage) noPinMessage.style.display = "block";
+          // Show toast
+          const toast = document.createElement('div');
+          toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f43f5e,#dc2626);color:white;padding:12px 24px;border-radius:8px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(244,63,94,0.4);';
+          toast.textContent = '🔓 PIN removed';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 2500);
+        } catch (error) {
+          modalManager.showErrorModal("Failed to remove PIN");
+        }
+      });
+    }
+
+    // Override session click to check PIN
+    sessionList.setEventHandlers({
+      onSessionClick: async (sessionId) => {
+        const pinEnabled = await popupService.isPinEnabled();
+        if (pinEnabled) {
+          pendingSessionId = sessionId;
+          modalManager.showPinVerifyModal();
+        } else {
+          await loadingManager.withLoading(async () => {
+            try {
+              await popupService.switchToSession(sessionId);
+              renderSessionList();
+            } catch (error) {
+              modalManager.showErrorModal(handleError(error, "Switch Session"));
+            }
+          });
+        }
+      },
+      onRenameClick: (sessionId) => {
+        const session = popupService.getSession(sessionId);
+        if (session) {
+          popupService.setState({ currentRenameSessionId: sessionId });
+          modalManager.showRenameModal(session.name, session.order);
+        }
+      },
+      onDeleteClick: (sessionId) => {
+        const session = popupService.getSession(sessionId);
+        if (session) {
+          popupService.setState({ currentDeleteSessionId: sessionId });
+          modalManager.showDeleteModal(session.name);
+        }
+      }
+    });
 
     btnHandlers.forEach(({ id, handler }) => {
       const el = document.getElementById(id);

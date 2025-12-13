@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.3.2-8b5cf6?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.5.0-8b5cf6?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)
 
@@ -47,6 +47,8 @@ Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, sepert
 - 🔒 **Local & Secure** - Semua data tersimpan lokal di browser Anda
 - 📤 **Export/Import** - Backup dan restore session data dengan mudah
 - 🎨 **Modern UI** - Dark mode dengan glassmorphism dan animasi smooth
+- 🔐 **PIN Security** - Lindungi session dengan PIN 4-6 digit
+- 🔄 **Auto Session Refresh** - Jaga session tetap valid secara otomatis
 - 🚀 **Fast & Lightweight** - Tidak memperlambat browsing experience
 
 ---
@@ -205,7 +207,18 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 📝 Changelog
 
-### v1.3.2 (Current)
+### v1.5.0 (Current)
+- 🔐 Added PIN Security - Protect sessions with 4-6 digit PIN
+- 🔄 Added Auto Session Refresh - Keep sessions valid automatically
+- ⚙️ Security Settings menu for PIN management
+- 🔒 SHA-256 hashed PIN storage for security
+
+### v1.4.0
+- 🔄 Added Auto Session Refresh feature
+- ⏱️ 5-minute cooldown to prevent excessive refreshes
+- 📝 Background session data update
+
+### v1.3.2
 - 📦 Added ZIP backup format support (export & import)
 - 💾 Choose between JSON or ZIP for backups
 - 📚 JSZip library integration

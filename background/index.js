@@ -656,7 +656,8 @@
     CLEAR_SESSION: "clearSession",
     CLEAR_SESSIONS: "clearSessions",
     EXPORT_SESSIONS: "exportSessions",
-    IMPORT_SESSIONS: "importSessions"
+    IMPORT_SESSIONS: "importSessions",
+    AUTO_REFRESH_SESSION: "autoRefreshSession"
   };
 
 
@@ -697,6 +698,9 @@
             break;
           case MESSAGE_ACTIONS.IMPORT_SESSIONS:
             await this.handleImportSessions(message, sendResponse);
+            break;
+          case MESSAGE_ACTIONS.AUTO_REFRESH_SESSION:
+            await this.handleAutoRefreshSession(message, sendResponse);
             break;
           default:
             sendResponse({ success: false, error: `Unknown action: ${message.action}` });
@@ -766,6 +770,39 @@
       const mergedSessions = [...currentSessions, ...sessionsWithNewIds];
       await this.saveStoredSessions(mergedSessions);
       sendResponse({ success: true });
+    }
+    async handleAutoRefreshSession(message, sendResponse) {
+      try {
+        const { domain, tabId, sessionId } = message;
+        if (!domain || !tabId || !sessionId) {
+          sendResponse({ success: false, error: "Missing required parameters" });
+          return;
+        }
+        // Get current session data from the page
+        const sessionData = await this.sessionHandler.getCurrentSession(domain, tabId);
+        // Get stored sessions and find the one to update
+        const sessions = await this.getStoredSessions();
+        const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
+        if (sessionIndex === -1) {
+          sendResponse({ success: false, error: "Session not found" });
+          return;
+        }
+        // Update the session with fresh data
+        sessions[sessionIndex] = {
+          ...sessions[sessionIndex],
+          cookies: sessionData.cookies,
+          localStorage: sessionData.localStorage,
+          sessionStorage: sessionData.sessionStorage,
+          indexedDB: sessionData.indexedDB,
+          lastUsed: Date.now()
+        };
+        await this.saveStoredSessions(sessions);
+        console.log(`[Auto Refresh] Session "${sessions[sessionIndex].name}" refreshed for ${domain}`);
+        sendResponse({ success: true, data: { refreshedAt: Date.now() } });
+      } catch (error) {
+        console.error("Error in auto refresh session:", error);
+        sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+      }
     }
     async getStoredSessions() {
       const result = await chrome.storage.local.get(STORAGE_KEYS.SESSIONS);

@@ -59,6 +59,9 @@
             <button id="exportImportBtn" class="dropdown-item">
               <span class="icon">📤</span> Export/Import
             </button>
+            <button id="securityBtn" class="dropdown-item">
+              <span class="icon">🔐</span> Security
+            </button>
             <div class="divider"></div>
             <button id="aboutBtn" class="dropdown-item">
               <span class="icon">ℹ️</span> About
@@ -187,7 +190,7 @@
       <div class="modal-body text-center">
         <div class="logo-large">🔄</div>
         <h4>Session Switcher 2</h4>
-        <p class="version">v1.3.1 (Modern UI)</p>
+        <p class="version">v1.5.0 (PIN Security)</p>
         <p class="description">Manage multiple accounts on the same website with ease. Secure, local, and fast.</p>
         <div class="links">
           <a href="https://github.com/Erzambayu/sessionns-changerr" target="_blank" class="link-btn">GitHub</a>
@@ -330,6 +333,91 @@
       </div>
     </div>
   </div>
+
+  <!-- PIN Setup Modal -->
+  <div id="pinSetupModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Setup PIN</h3>
+        <button id="closePinSetupModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="pin-icon">🔐</div>
+        <p>Create a 4-6 digit PIN to protect your sessions</p>
+        <div class="form-group">
+          <label for="pinSetupInput">Enter PIN</label>
+          <input type="password" id="pinSetupInput" class="pin-input" maxlength="6" pattern="[0-9]*" inputmode="numeric"
+            placeholder="••••••" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="pinConfirmInput">Confirm PIN</label>
+          <input type="password" id="pinConfirmInput" class="pin-input" maxlength="6" pattern="[0-9]*"
+            inputmode="numeric" placeholder="••••••" autocomplete="off">
+        </div>
+        <p id="pinSetupError" class="pin-error"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPinSetup" class="btn btn-secondary">Cancel</button>
+        <button id="confirmPinSetup" class="btn btn-primary">Set PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN Verify Modal -->
+  <div id="pinVerifyModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Enter PIN</h3>
+        <button id="closePinVerifyModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="pin-icon">🔒</div>
+        <p>Enter your PIN to switch session</p>
+        <div class="form-group">
+          <input type="password" id="pinVerifyInput" class="pin-input" maxlength="6" pattern="[0-9]*"
+            inputmode="numeric" placeholder="••••••" autocomplete="off">
+        </div>
+        <p id="pinVerifyError" class="pin-error"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelPinVerify" class="btn btn-secondary">Cancel</button>
+        <button id="confirmPinVerify" class="btn btn-primary">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Settings Modal -->
+  <div id="securitySettingsModal" class="modal">
+    <div class="modal-content bounce-in">
+      <div class="modal-header">
+        <h3>Security Settings</h3>
+        <button id="closeSecuritySettingsModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="security-option">
+          <div class="security-option-info">
+            <span class="security-option-title">🔐 PIN Protection</span>
+            <span class="security-option-desc">Require PIN to switch sessions</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="pinEnabledToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div id="pinActions" class="pin-actions" style="display: none;">
+          <button id="changePinBtn" class="btn btn-secondary btn-sm">Change PIN</button>
+          <button id="removePinBtn" class="btn btn-danger btn-sm">Remove PIN</button>
+        </div>
+        <div id="noPinMessage" class="no-pin-message">
+          <p class="text-muted">Enable PIN protection to secure your sessions</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeSecuritySettingsBtn" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script src="index.js"></script>
 </body>
 

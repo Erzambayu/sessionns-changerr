@@ -12,7 +12,7 @@
   --warning-hover: #fbbf24;
   --success-color: #10b981;
   --success-glow: rgba(16, 185, 129, 0.3);
-  
+
   /* Dark Theme */
   --background-gradient: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
   --surface-color: rgba(30, 30, 50, 0.8);
@@ -23,19 +23,19 @@
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --border-color: rgba(255, 255, 255, 0.08);
-  
+
   /* Effects */
   --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.15);
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
   --shadow-hover: 0 12px 40px rgba(139, 92, 246, 0.2);
   --blur-amount: 12px;
-  
+
   /* Spacing & Radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
-  
+
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-heading: 'Poppins', var(--font-sans);
@@ -68,7 +68,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
   pointer-events: none;
@@ -116,8 +116,15 @@ body::before {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 2px 8px rgba(139, 92, 246, 0.4)); }
-  50% { filter: drop-shadow(0 2px 16px rgba(139, 92, 246, 0.6)); }
+
+  0%,
+  100% {
+    filter: drop-shadow(0 2px 8px rgba(139, 92, 246, 0.4));
+  }
+
+  50% {
+    filter: drop-shadow(0 2px 16px rgba(139, 92, 246, 0.6));
+  }
 }
 
 .brand-info {
@@ -203,6 +210,7 @@ body::before {
     opacity: 0;
     transform: scale(0.95) translateY(-8px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -291,7 +299,7 @@ body::before {
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15), var(--shadow-glow);
 }
 
-.search-box input:focus + .search-icon,
+.search-box input:focus+.search-icon,
 .search-box:focus-within .search-icon {
   color: var(--primary-color);
 }
@@ -473,8 +481,15 @@ body::before {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .empty-state p {
@@ -519,7 +534,7 @@ body::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -722,9 +737,19 @@ body::before {
 }
 
 @keyframes bounce-in {
-  0% { transform: scale(0); opacity: 0; }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .text-center {
@@ -772,7 +797,7 @@ body::before {
   accent-color: var(--primary-color);
 }
 
-.radio-option input[type="radio"]:checked + .radio-content .radio-title {
+.radio-option input[type="radio"]:checked+.radio-content .radio-title {
   color: var(--primary-hover);
 }
 
@@ -838,6 +863,7 @@ body::before {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -975,4 +1001,168 @@ body::before {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* ============================================
+   PIN SECURITY STYLES
+   ============================================ */
+.pin-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  animation: bounce-in 0.5s ease;
+}
+
+.pin-input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  border: 2px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  font-family: 'Courier New', monospace;
+}
+
+.pin-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2), 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+.pin-input::placeholder {
+  color: var(--text-muted);
+  letter-spacing: 0.3rem;
+}
+
+.pin-error {
+  color: var(--danger-color);
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: 0.5rem;
+  min-height: 1.2rem;
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Security Settings */
+.security-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1rem;
+}
+
+.security-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.security-option-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.security-option-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+  border-radius: 26px;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background: var(--text-secondary);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked+.toggle-slider {
+  background: linear-gradient(135deg, var(--primary-color), #6366f1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+  transform: translateX(24px);
+  background: white;
+}
+
+.toggle-switch input:focus+.toggle-slider {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+/* PIN Actions */
+.pin-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.pin-actions .btn {
+  flex: 1;
+}
+
+.no-pin-message {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.no-pin-message p {
+  margin: 0;
 }
