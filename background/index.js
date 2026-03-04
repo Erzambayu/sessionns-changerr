@@ -28,31 +28,34 @@
 
   // src/background/handlers/cookie.handler.ts
   var CookieHandler = class {
-    async getCookiesForDomain(domain) {
+    // Fix #2: Accept tabId so we only read from the tab's specific cookie store,
+    // preventing accidental reads from incognito / other profile stores.
+    async getCookiesForDomain(domain, tabId) {
       try {
-        const stores = await chrome.cookies.getAllCookieStores();
-        const allCookies = [];
-        // Handle localhost with port
         const cleanDomain = domain.split(":")[0];
-
-        for (const store of stores) {
-          const cookies = await chrome.cookies.getAll({ storeId: store.id });
-          const domainCookies = cookies.filter((cookie) => {
-            // Match exact domain or subdomains
-            return cookie.domain === cleanDomain ||
-              cookie.domain.endsWith("." + cleanDomain) ||
-              (cleanDomain === "localhost" && cookie.domain === "localhost");
-          });
-          allCookies.push(...domainCookies);
+        // Resolve the exact cookie store used by the target tab
+        let storeId = "0"; // default store fallback
+        if (tabId) {
+          try {
+            const tab = await chrome.tabs.get(tabId);
+            if (tab.cookieStoreId) storeId = tab.cookieStoreId;
+          } catch (e) {
+            console.warn("[Cookies] Could not get tab cookieStoreId, using default store:", e);
+          }
         }
-        return allCookies;
+        const cookies = await chrome.cookies.getAll({ storeId });
+        return cookies.filter((cookie) => {
+          return cookie.domain === cleanDomain ||
+            cookie.domain.endsWith("." + cleanDomain) ||
+            (cleanDomain === "localhost" && cookie.domain === "localhost");
+        });
       } catch (error) {
         console.error("Error getting cookies for domain:", domain, error);
         return [];
       }
     }
-    async clearCookiesForDomain(domain) {
-      const cookies = await this.getCookiesForDomain(domain);
+    async clearCookiesForDomain(domain, tabId) {
+      const cookies = await this.getCookiesForDomain(domain, tabId);
       const clearPromises = cookies.map(async (cookie) => {
         try {
           const url = this.buildCookieUrl(cookie, domain);
@@ -79,12 +82,15 @@
       console.log(`Restoring ${cookies.length} cookies for domain: ${domain}`);
       let successCount = 0;
       let failureCount = 0;
+      let skippedCount = 0;
+      // Fix #1: 5-second per-cookie timeout to prevent hanging on slow/stuck cookies
+      const COOKIE_TIMEOUT = 5000;
 
-      // Restore cookies sequentially to avoid potential race conditions with same-name cookies
+      // Restore cookies sequentially to avoid race conditions with same-name cookies
       for (const cookie of cookies) {
         if (!cookie || !cookie.name) {
           console.warn("Skipping invalid cookie:", cookie);
-          failureCount++;
+          skippedCount++;
           continue;
         }
         try {
@@ -92,19 +98,24 @@
 
           // Fix for hostOnly cookies: if a cookie is hostOnly, we must NOT supply the domain.
           // Chrome API infers hostOnly=true if domain is omitted.
-          // If we supply a domain (even the correct one), it might be treated as a domain cookie (hostOnly=false).
           if (cookie.hostOnly) {
             delete cookieDetails.domain;
           }
 
-          await chrome.cookies.set(cookieDetails);
+          // Set with individual timeout so one stuck cookie can't block the entire restore
+          await Promise.race([
+            chrome.cookies.set(cookieDetails),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Cookie set timeout")), COOKIE_TIMEOUT)
+            )
+          ]);
           successCount++;
         } catch (error) {
           failureCount++;
-          console.warn(`Failed to restore cookie: ${cookie.name}`, error);
+          console.warn(`Failed to restore cookie: ${cookie.name}`, error.message);
         }
       }
-      console.log(`Cookie restoration complete - Success: ${successCount}, Failed: ${failureCount}`);
+      console.log(`Cookie restoration complete - Success: ${successCount}, Failed: ${failureCount}, Skipped: ${skippedCount}`);
     }
     buildCookieUrl(cookie, fallbackDomain) {
       const protocol = cookie.secure ? "https" : "http";
@@ -572,7 +583,7 @@
     async getCurrentSession(domain, tabId) {
       try {
         const [cookies, storageData] = await Promise.all([
-          this.cookieHandler.getCookiesForDomain(domain),
+          this.cookieHandler.getCookiesForDomain(domain, tabId),
           this.storageHandler.getStorageData(tabId)
         ]);
         return {
@@ -604,7 +615,7 @@
 
       try {
         // Clear existing data first (usually fast, but good to be safe)
-        await this.cookieHandler.clearCookiesForDomain(domain);
+        await this.cookieHandler.clearCookiesForDomain(domain, tabId);
         await this.storageHandler.clearStorageData(tabId);
 
         // Restore data with timeout
@@ -639,7 +650,7 @@
     async clearSession(domain, tabId) {
       try {
         await Promise.all([
-          this.cookieHandler.clearCookiesForDomain(domain),
+          this.cookieHandler.clearCookiesForDomain(domain, tabId),
           this.storageHandler.clearStorageData(tabId)
         ]);
         await chrome.tabs.reload(tabId);
@@ -820,9 +831,31 @@
     }
   };
 
+  // Fix #3: Storage monitoring — unlimitedStorage is intentionally kept because sessions
+  // contain full cookie sets, localStorage, sessionStorage, and IndexedDB which can be
+  // several MB per domain. Regular storage (~5 MB) is insufficient for power users.
+  async function checkStorageUsage() {
+    try {
+      const usage = await chrome.storage.local.getBytesInUse(null);
+      const usageMB = usage / 1024 / 1024;
+      const QUOTA_WARNING_MB = 50;
+      if (usageMB > QUOTA_WARNING_MB) {
+        console.warn(`[Storage] Usage: ${usageMB.toFixed(2)} MB — consider removing unused sessions to free space.`);
+      } else {
+        console.log(`[Storage] Usage: ${usageMB.toFixed(2)} MB`);
+      }
+      return usage;
+    } catch (e) {
+      console.warn("[Storage] Could not check storage usage:", e);
+      return 0;
+    }
+  }
+
   // src/background/index.ts
   var messageService = new MessageService();
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return messageService.handleMessage(message, sender, sendResponse);
   });
+  // Run storage health check on service worker startup
+  checkStorageUsage();
 })();

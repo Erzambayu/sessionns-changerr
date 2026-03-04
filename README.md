@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.6.0-8b5cf6?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.7.0-8b5cf6?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)
 
@@ -208,7 +208,13 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 📝 Changelog
 
-### v1.6.0 (Current)
+### v1.7.0 (Current)
+- 🐛 Fix **#1 Cookie Restoration Race Condition** — tiap cookie kini punya timeout 5 detik via `Promise.race`, tidak bisa hang selamanya
+- 🐛 Fix **#2 Incognito Cookie Leak** — `getCookiesForDomain` kini menggunakan `cookieStoreId` dari tab target, bukan iterate semua stores
+- 🐛 Fix **#3 Storage Monitoring** — tambah fungsi `checkStorageUsage()` yang memantau penggunaan storage & warn jika > 50 MB
+- ⚠️ `unlimitedStorage` tetap dipertahankan (dibutuhkan untuk menyimpan cookies + IndexedDB yang bisa multi-MB)
+
+### v1.6.0
 - 📋 Added **Duplicate Session** - Clone session dengan sekali klik
 - 🐛 Fix `Clear All Sessions` tidak benar-benar menghapus semua data
 - 🐛 Fix PIN modal tidak bisa Submit dengan tombol **Enter**
