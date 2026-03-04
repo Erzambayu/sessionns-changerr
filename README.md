@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.5.0-8b5cf6?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.6.0-8b5cf6?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)
 
@@ -148,6 +148,7 @@ Untuk logout dan login dengan akun berbeda:
 ### ✏️ Edit & Hapus Session
 
 - **Edit:** Hover session → Klik ✏️ → Ubah nama/urutan → Save
+- **Duplikat:** Hover session → Klik 📋 → Session baru dibuat otomatis
 - **Hapus:** Hover session → Klik 🗑️ → Konfirmasi delete
 
 ---
@@ -207,7 +208,16 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 📝 Changelog
 
-### v1.5.0 (Current)
+### v1.6.0 (Current)
+- 📋 Added **Duplicate Session** - Clone session dengan sekali klik
+- 🐛 Fix `Clear All Sessions` tidak benar-benar menghapus semua data
+- 🐛 Fix PIN modal tidak bisa Submit dengan tombol **Enter**
+- 🐛 Fix Auto Refresh cooldown selalu terblokir karena cek field yang salah
+- 🐛 Fix hover style tombol Delete tidak muncul (selector CSS salah)
+- ♻️ Refactor: centralized `showToast()` helper, hapus kode duplikat
+- 🗑️ Remove dead `viewModeBtn` dari header
+
+### v1.5.0
 - 🔐 Added PIN Security - Protect sessions with 4-6 digit PIN
 - 🔄 Added Auto Session Refresh - Keep sessions valid automatically
 - ⚙️ Security Settings menu for PIN management
