@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -16,137 +16,156 @@
 <body>
   <script src="../libs/jszip.min.js"></script>
   <div class="app-container">
-    <header class="app-header">
+    <header class="app-header" role="banner">
       <div class="brand">
-        <img class="logo-icon" src="../assets/icons/icon-48.png" alt="Session Switcher">
+        <span class="brand-mark" aria-hidden="true">
+          <span class="brand-bracket">[</span>
+          <span class="brand-name">session.switcher</span>
+          <span class="brand-bracket">]</span>
+        </span>
         <div class="brand-info">
-          <h1>Session Switcher</h1>
-          <div class="current-domain" id="currentSite">Loading...</div>
+          <span class="current-domain-label">→</span>
+          <span class="current-domain" id="currentSite" title="Loading...">Loading...</span>
         </div>
       </div>
       <div class="header-actions">
+        <button id="quickSwitcherTrigger" class="icon-btn" title="Quick switcher (Ctrl+K)" aria-label="Open quick switcher">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+        </button>
         <div class="dropdown-container">
-          <button id="menuBtn" class="icon-btn" title="Menu">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="1"></circle>
-              <circle cx="12" cy="5" r="1"></circle>
-              <circle cx="12" cy="19" r="1"></circle>
+          <button id="menuBtn" class="icon-btn" title="Menu" aria-label="Open menu" aria-haspopup="true"
+            aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="4" y1="6" x2="20" y2="6"></line>
+              <line x1="4" y1="12" x2="20" y2="12"></line>
+              <line x1="4" y1="18" x2="14" y2="18"></line>
             </svg>
           </button>
-          <div id="menuDropdown" class="dropdown-menu">
-            <button id="saveBtn" class="dropdown-item">
-              <span class="icon">💾</span> Save Session
+          <div id="menuDropdown" class="dropdown-menu" role="menu">
+            <button id="saveBtn" class="dropdown-item" role="menuitem">
+              <span class="dropdown-action">save current</span>
+              <kbd>S</kbd>
             </button>
-            <button id="newSessionBtn" class="dropdown-item">
-              <span class="icon">➕</span> New Session
+            <button id="newSessionBtn" class="dropdown-item" role="menuitem">
+              <span class="dropdown-action">fresh session</span>
             </button>
-            <div class="divider"></div>
-            <button id="clearSessionBtn" class="dropdown-item">
-              <span class="icon">🧹</span> Clear Session
+            <div class="divider" role="separator"></div>
+            <button id="clearSessionBtn" class="dropdown-item" role="menuitem">
+              <span class="dropdown-action">clear data</span>
             </button>
-            <button id="exportImportBtn" class="dropdown-item">
-              <span class="icon">📤</span> Export/Import
+            <button id="exportImportBtn" class="dropdown-item" role="menuitem">
+              <span class="dropdown-action">backup &amp; restore</span>
             </button>
-            <button id="securityBtn" class="dropdown-item">
-              <span class="icon">🔐</span> Security
+            <button id="securityBtn" class="dropdown-item" role="menuitem">
+              <span class="dropdown-action">security</span>
             </button>
-            <div class="divider"></div>
-            <button id="aboutBtn" class="dropdown-item">
-              <span class="icon">ℹ️</span> About
+            <div class="divider" role="separator"></div>
+            <button id="aboutBtn" class="dropdown-item" role="menuitem">
+              <span class="dropdown-action">about</span>
             </button>
           </div>
         </div>
       </div>
     </header>
 
-    <div class="search-container">
+    <div class="search-container" role="search">
       <div class="search-box">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="searchSessions" placeholder="Search sessions..." autocomplete="off">
+        <span class="search-icon" aria-hidden="true">/</span>
+        <input type="text" id="searchSessions" placeholder="filter on this site..." autocomplete="off"
+          aria-label="Filter sessions on this site">
+        <kbd class="search-hint">⌘K all sites</kbd>
       </div>
     </div>
 
-    <main class="app-content">
-      <div id="sessionsList" class="sessions-list">
-        <!-- Sessions will be injected here -->
+    <main class="app-content" role="main">
+      <div id="sessionsList" class="sessions-list" role="region" aria-label="Saved sessions">
         <div class="empty-state">
-          <div class="empty-icon">📭</div>
+          <div class="empty-icon" aria-hidden="true">·</div>
           <p>No sessions saved for this site</p>
-          <button id="createFirstSessionBtn" class="btn btn-primary btn-sm">Save Current Session</button>
+          <button id="createFirstSessionBtn" class="btn btn-primary btn-sm">Save current session</button>
         </div>
       </div>
     </main>
 
-    <footer class="app-footer">
+    <footer class="app-footer" role="contentinfo">
       <div class="status-bar">
+        <span class="status-dim">●</span>
         <span id="sessionCount">0 sessions</span>
+      </div>
+      <div class="status-bar status-bar-end">
+        <kbd>?</kbd> shortcuts
       </div>
     </footer>
   </div>
 
+  <!-- ARIA live region for toast announcements -->
+  <div id="toastLive" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
   <!-- Modals -->
-  <div id="saveModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="saveModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="saveModalTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Save Session</h3>
-        <button id="closeSaveModal" class="close-btn">&times;</button>
+        <h3 id="saveModalTitle">Save session</h3>
+        <button id="closeSaveModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="sessionName">Session Name</label>
-          <input type="text" id="sessionName" placeholder="e.g. Personal, Work, Testing" value="Unnamed Session" />
+          <label for="sessionName">Session name</label>
+          <input type="text" id="sessionName" placeholder="Personal, Work, Testing..." value="Unnamed Session" />
         </div>
         <div class="form-group">
-          <label for="sessionOrder">Order Priority</label>
-          <input type="number" id="sessionOrder" placeholder="1" />
+          <label for="sessionOrder">Order priority</label>
+          <input type="number" id="sessionOrder" placeholder="1" min="1" />
         </div>
       </div>
       <div class="modal-footer">
         <button id="cancelSave" class="btn btn-secondary">Cancel</button>
-        <button id="confirmSave" class="btn btn-primary">Save Session</button>
+        <button id="confirmSave" class="btn btn-primary">Save</button>
       </div>
     </div>
   </div>
 
-  <div id="renameModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="renameModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="renameModalTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Edit Session</h3>
-        <button id="closeRenameModal" class="close-btn">&times;</button>
+        <h3 id="renameModalTitle">Edit session</h3>
+        <button id="closeRenameModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="newSessionName">Session Name</label>
+          <label for="newSessionName">Session name</label>
           <input type="text" id="newSessionName" placeholder="Enter new name" />
         </div>
         <div class="form-group">
-          <label for="newSessionOrder">Order Priority</label>
-          <input type="number" id="newSessionOrder" placeholder="Enter new order" />
+          <label for="newSessionOrder">Order priority</label>
+          <input type="number" id="newSessionOrder" placeholder="Enter new order" min="1" />
         </div>
       </div>
       <div class="modal-footer">
-        <button id="replaceSessionBtn" class="btn btn-warning">Update with Current Data</button>
+        <button id="replaceSessionBtn" class="btn btn-warning">Replace with current data</button>
         <button id="cancelRename" class="btn btn-secondary">Cancel</button>
-        <button id="confirmRename" class="btn btn-primary">Save Changes</button>
+        <button id="confirmRename" class="btn btn-primary">Save</button>
       </div>
     </div>
   </div>
 
-  <div id="deleteModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="deleteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Delete Session</h3>
-        <button id="closeDeleteModal" class="close-btn">&times;</button>
+        <h3 id="deleteModalTitle">Delete session</h3>
+        <button id="closeDeleteModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
-        <div class="confirm-icon delete">🗑️</div>
-        <p>Are you sure you want to delete <strong id="deleteSessionName"></strong>?</p>
-        <p class="text-muted">This action cannot be undone.</p>
+        <p>Delete <strong id="deleteSessionName"></strong>?</p>
+        <p class="text-muted">This cannot be undone.</p>
       </div>
       <div class="modal-footer">
         <button id="cancelDelete" class="btn btn-secondary">Cancel</button>
@@ -155,11 +174,12 @@
     </div>
   </div>
 
-  <div id="errorModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="errorModal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="errorModalTitle"
+    aria-describedby="errorMessage" aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3 class="text-danger">Error</h3>
-        <button id="closeErrorModal" class="close-btn">&times;</button>
+        <h3 id="errorModalTitle" class="text-danger">Error</h3>
+        <button id="closeErrorModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <div class="error-message" id="errorMessage">An unexpected error occurred.</div>
@@ -170,132 +190,145 @@
     </div>
   </div>
 
-  <div id="aboutModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="aboutModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>About</h3>
-        <button id="closeAboutModal" class="close-btn">&times;</button>
+        <h3 id="aboutModalTitle">About</h3>
+        <button id="closeAboutModal" class="close-btn" aria-label="Close">×</button>
       </div>
-      <div class="modal-body text-center">
-        <div class="logo-large">🔄</div>
-        <h4>Session Switcher 2</h4>
-        <p class="version">v1.7.0</p>
-        <p class="description">Manage multiple accounts on the same website with ease. Secure, local, and fast.</p>
+      <div class="modal-body">
+        <div class="about-mark" aria-hidden="true">
+          [ <span class="about-name">session.switcher</span> ]
+        </div>
+        <p class="version" id="aboutVersion">v—</p>
+        <p class="description">Multiple accounts on the same site. Local-first, keyboard-first, no telemetry.</p>
+        <div class="about-shortcuts">
+          <div><kbd>⌘K</kbd> / <kbd>Ctrl K</kbd> Quick switcher across all sites</div>
+          <div><kbd>/</kbd> Focus search</div>
+          <div><kbd>1</kbd>–<kbd>9</kbd> Switch to nth session</div>
+          <div><kbd>Esc</kbd> Close any modal</div>
+        </div>
         <div class="links">
-          <a href="https://github.com/Erzambayu/sessionns-changerr" target="_blank" class="link-btn">GitHub</a>
+          <a href="https://github.com/Erzambayu/sessionns-changerr" target="_blank" rel="noopener" class="link-btn">github</a>
         </div>
       </div>
       <div class="modal-footer">
-        <button id="closeAboutModalBtn" class="btn btn-primary">Close</button>
+        <button id="closeAboutModalBtn" class="btn btn-primary">Done</button>
       </div>
     </div>
   </div>
 
-  <div id="newSessionConfirmModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="newSessionConfirmModal" class="modal" role="dialog" aria-modal="true"
+    aria-labelledby="newSessionConfirmTitle" aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>New Session</h3>
-        <button id="closeNewSessionConfirmModal" class="close-btn">&times;</button>
+        <h3 id="newSessionConfirmTitle">Fresh session</h3>
+        <button id="closeNewSessionConfirmModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
-        <div class="confirm-icon new">✨</div>
-        <p>Create a fresh session?</p>
-        <p class="text-muted">This will clear current cookies and storage to start fresh. Your saved sessions are safe.
-        </p>
+        <p>Start a fresh session on this site?</p>
+        <p class="text-muted">Cookies, localStorage, sessionStorage, and IndexedDB will be cleared. Your saved sessions
+          stay safe.</p>
       </div>
       <div class="modal-footer">
         <button id="cancelNewSession" class="btn btn-secondary">Cancel</button>
-        <button id="confirmNewSession" class="btn btn-primary">Create Session</button>
+        <button id="confirmNewSession" class="btn btn-primary">Start fresh</button>
       </div>
     </div>
   </div>
 
-  <div id="clearSessionModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="clearSessionModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="clearSessionTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Clear Data</h3>
-        <button id="closeClearSessionModal" class="close-btn">&times;</button>
+        <h3 id="clearSessionTitle">Clear data</h3>
+        <button id="closeClearSessionModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <p>Select what to clear:</p>
-        <div class="radio-group">
+        <div class="radio-group" role="radiogroup">
           <label class="radio-option">
             <input type="radio" name="clearOption" value="current" checked>
             <div class="radio-content">
-              <span class="radio-title">Current Site Only</span>
-              <span class="radio-desc">Remove sessions for this domain</span>
+              <span class="radio-title">Current site only</span>
+              <span class="radio-desc">Remove saved sessions for this domain</span>
             </div>
           </label>
           <label class="radio-option">
             <input type="radio" name="clearOption" value="all">
             <div class="radio-content">
-              <span class="radio-title">All Sites</span>
-              <span class="radio-desc">Remove all saved sessions everywhere</span>
+              <span class="radio-title">All sites</span>
+              <span class="radio-desc">Wipe every saved session — irreversible</span>
             </div>
           </label>
         </div>
       </div>
       <div class="modal-footer">
         <button id="cancelClearSession" class="btn btn-secondary">Cancel</button>
-        <button id="confirmClearSession" class="btn btn-danger">Clear Data</button>
+        <button id="confirmClearSession" class="btn btn-danger">Clear data</button>
       </div>
     </div>
   </div>
 
-  <div id="exportImportModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="exportImportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="exportImportTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Data Management</h3>
-        <button id="closeExportImportModal" class="close-btn">&times;</button>
+        <h3 id="exportImportTitle">Backup &amp; restore</h3>
+        <button id="closeExportImportModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
-        <div class="tabs">
-          <button id="exportTabBtn" class="tab-btn active">Export</button>
-          <button id="importTabBtn" class="tab-btn">Import</button>
+        <div class="tabs" role="tablist">
+          <button id="exportTabBtn" class="tab-btn active" role="tab" aria-selected="true">Export</button>
+          <button id="importTabBtn" class="tab-btn" role="tab" aria-selected="false">Import</button>
         </div>
         <div class="tab-content-container">
-          <div id="exportTab" class="tab-pane active">
-            <div class="radio-group">
+          <div id="exportTab" class="tab-pane active" role="tabpanel">
+            <div class="warning-box" role="note">
+              Backup contains plaintext cookies and credentials. Store securely.
+            </div>
+            <div class="radio-group" role="radiogroup" aria-label="Scope">
               <label class="radio-option">
                 <input type="radio" name="exportOption" value="current" checked>
                 <div class="radio-content">
-                  <span class="radio-title">Current Site</span>
+                  <span class="radio-title">Current site</span>
                 </div>
               </label>
               <label class="radio-option">
                 <input type="radio" name="exportOption" value="all">
                 <div class="radio-content">
-                  <span class="radio-title">All Data</span>
+                  <span class="radio-title">All data</span>
                 </div>
               </label>
             </div>
-            <div class="radio-group" style="margin-top: 10px;">
+            <div class="radio-group" role="radiogroup" aria-label="Format" style="margin-top: 10px;">
               <label class="radio-option">
                 <input type="radio" name="exportFormat" value="json" checked>
                 <div class="radio-content">
-                  <span class="radio-title">📄 JSON</span>
+                  <span class="radio-title">JSON</span>
                   <span class="radio-desc">Standard format</span>
                 </div>
               </label>
               <label class="radio-option">
                 <input type="radio" name="exportFormat" value="zip">
                 <div class="radio-content">
-                  <span class="radio-title">📦 ZIP</span>
-                  <span class="radio-desc">Compressed format</span>
+                  <span class="radio-title">ZIP</span>
+                  <span class="radio-desc">Compressed archive</span>
                 </div>
               </label>
             </div>
-            <button id="exportBtn" class="btn btn-primary full-width">Download Backup</button>
+            <button id="exportBtn" class="btn btn-primary full-width">Download backup</button>
           </div>
-          <div id="importTab" class="tab-pane">
+          <div id="importTab" class="tab-pane" role="tabpanel">
             <div class="file-upload-area">
-              <input type="file" id="importFileInput" accept=".json,.zip">
+              <input type="file" id="importFileInput" accept=".json,.zip" aria-label="Select backup file">
               <div class="upload-placeholder">
-                <span class="icon">📂</span>
-                <span>Click to select backup file (.json or .zip)</span>
+                <span class="icon" aria-hidden="true">↑</span>
+                <span>Click to select backup (.json or .zip)</span>
               </div>
             </div>
-            <button id="importBtn" class="btn btn-primary full-width" disabled>Restore Data</button>
+            <button id="importBtn" class="btn btn-primary full-width" disabled>Restore data</button>
           </div>
         </div>
       </div>
@@ -305,34 +338,34 @@
     </div>
   </div>
 
-  <div id="replaceConfirmModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="replaceConfirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="replaceConfirmTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Update Session</h3>
-        <button id="closeReplaceConfirmModal" class="close-btn">&times;</button>
+        <h3 id="replaceConfirmTitle">Replace session</h3>
+        <button id="closeReplaceConfirmModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
-        <div class="confirm-icon update">🔄</div>
-        <p>Update <strong id="replaceSessionName"></strong> with current data?</p>
+        <p>Replace <strong id="replaceSessionName"></strong> with the current tab's data?</p>
         <p class="text-muted">The old session data will be overwritten.</p>
       </div>
       <div class="modal-footer">
         <button id="cancelReplaceConfirm" class="btn btn-secondary">Cancel</button>
-        <button id="confirmReplaceSession" class="btn btn-primary">Update</button>
+        <button id="confirmReplaceSession" class="btn btn-primary">Replace</button>
       </div>
     </div>
   </div>
 
   <!-- PIN Setup Modal -->
-  <div id="pinSetupModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="pinSetupModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pinSetupTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Setup PIN</h3>
-        <button id="closePinSetupModal" class="close-btn">&times;</button>
+        <h3 id="pinSetupTitle">Setup PIN</h3>
+        <button id="closePinSetupModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
-        <div class="pin-icon">🔐</div>
-        <p>Create a 4-6 digit PIN to protect your sessions</p>
+        <p>Create a 4–6 digit PIN to gate sensitive actions.</p>
         <div class="form-group">
           <label for="pinSetupInput">Enter PIN</label>
           <input type="password" id="pinSetupInput" class="pin-input" maxlength="6" pattern="[0-9]*" inputmode="numeric"
@@ -343,7 +376,7 @@
           <input type="password" id="pinConfirmInput" class="pin-input" maxlength="6" pattern="[0-9]*"
             inputmode="numeric" placeholder="••••••" autocomplete="off">
         </div>
-        <p id="pinSetupError" class="pin-error"></p>
+        <p id="pinSetupError" class="pin-error" role="alert"></p>
       </div>
       <div class="modal-footer">
         <button id="cancelPinSetup" class="btn btn-secondary">Cancel</button>
@@ -353,20 +386,21 @@
   </div>
 
   <!-- PIN Verify Modal -->
-  <div id="pinVerifyModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="pinVerifyModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pinVerifyTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Enter PIN</h3>
-        <button id="closePinVerifyModal" class="close-btn">&times;</button>
+        <h3 id="pinVerifyTitle">Enter PIN</h3>
+        <button id="closePinVerifyModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
-        <div class="pin-icon">🔒</div>
-        <p>Enter your PIN to switch session</p>
+        <p id="pinVerifyReason" class="pin-reason"></p>
         <div class="form-group">
+          <label for="pinVerifyInput" class="sr-only">PIN</label>
           <input type="password" id="pinVerifyInput" class="pin-input" maxlength="6" pattern="[0-9]*"
             inputmode="numeric" placeholder="••••••" autocomplete="off">
         </div>
-        <p id="pinVerifyError" class="pin-error"></p>
+        <p id="pinVerifyError" class="pin-error" role="alert"></p>
       </div>
       <div class="modal-footer">
         <button id="cancelPinVerify" class="btn btn-secondary">Cancel</button>
@@ -376,20 +410,21 @@
   </div>
 
   <!-- Security Settings Modal -->
-  <div id="securitySettingsModal" class="modal">
-    <div class="modal-content bounce-in">
+  <div id="securitySettingsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="securitySettingsTitle"
+    aria-hidden="true">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3>Security Settings</h3>
-        <button id="closeSecuritySettingsModal" class="close-btn">&times;</button>
+        <h3 id="securitySettingsTitle">Security</h3>
+        <button id="closeSecuritySettingsModal" class="close-btn" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <div class="security-option">
           <div class="security-option-info">
-            <span class="security-option-title">🔐 PIN Protection</span>
-            <span class="security-option-desc">Require PIN to switch sessions</span>
+            <span class="security-option-title">PIN protection</span>
+            <span class="security-option-desc">Require PIN for switching, editing, exporting, deleting</span>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="pinEnabledToggle">
+            <input type="checkbox" id="pinEnabledToggle" aria-label="Enable PIN protection">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -398,11 +433,32 @@
           <button id="removePinBtn" class="btn btn-danger btn-sm">Remove PIN</button>
         </div>
         <div id="noPinMessage" class="no-pin-message">
-          <p class="text-muted">Enable PIN protection to secure your sessions</p>
+          <p class="text-muted">Enable PIN protection to gate sensitive actions.</p>
         </div>
+        <p class="security-note">PIN is hashed with PBKDF2 (200K iterations, per-install salt). It is not encryption —
+          treat your local profile as the trust boundary.</p>
       </div>
       <div class="modal-footer">
         <button id="closeSecuritySettingsBtn" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick switcher (Ctrl/Cmd+K) -->
+  <div id="quickSwitcherModal" class="modal quick-switcher-modal" role="dialog" aria-modal="true"
+    aria-labelledby="quickSwitcherTitle" aria-hidden="true">
+    <div class="modal-content quick-switcher">
+      <div class="qs-header">
+        <span class="qs-prompt" aria-hidden="true">›</span>
+        <input type="text" id="quickSwitcherInput" placeholder="Search across all sites..." autocomplete="off"
+          spellcheck="false" aria-label="Search all sessions" />
+        <kbd class="qs-hint">esc</kbd>
+      </div>
+      <div id="quickSwitcherResults" class="qs-results" role="listbox" aria-label="Session results"></div>
+      <div class="qs-footer">
+        <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+        <span><kbd>↵</kbd> switch</span>
+        <span id="quickSwitcherTitle" class="qs-title">all sessions</span>
       </div>
     </div>
   </div>

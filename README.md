@@ -2,11 +2,11 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.7.0-8b5cf6?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.8.1-f59e0b?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-84cc16?style=for-the-badge)
 
-**Kelola multiple akun pada website yang sama dengan mudah, aman, dan cepat.**
+**Kelola multiple akun pada website yang sama. Local-first, keyboard-first, no telemetry.**
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Disclaimer](#%EF%B8%8F-disclaimer) • [Credits](#-credits)
 
@@ -41,15 +41,19 @@ Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, sepert
 
 ## ✨ Features
 
-- 🔐 **Session Management** - Simpan dan switch antar session dengan sekali klik
-- 💾 **Multi-Account Support** - Kelola banyak akun pada website yang sama
-- 🍪 **Complete Data Backup** - Menyimpan cookies, localStorage, sessionStorage, dan IndexedDB
-- 🔒 **Local & Secure** - Semua data tersimpan lokal di browser Anda
-- 📤 **Export/Import** - Backup dan restore session data dengan mudah
-- 🎨 **Modern UI** - Dark mode dengan glassmorphism dan animasi smooth
-- 🔐 **PIN Security** - Lindungi session dengan PIN 4-6 digit
-- 🔄 **Auto Session Refresh** - Jaga session tetap valid secara otomatis
-- 🚀 **Fast & Lightweight** - Tidak memperlambat browsing experience
+- 🔐 **Session Management** — Simpan dan switch antar session dengan sekali klik
+- 💾 **Multi-Account Support** — Kelola banyak akun pada website yang sama
+- 🍪 **Complete Data Backup** — Cookies, localStorage, sessionStorage, IndexedDB
+- ⚡ **Quick Switcher** — `Ctrl+K` / `Cmd+K` fuzzy search lintas semua site
+- 🔢 **Badge Counter** — Jumlah session per domain langsung di icon toolbar
+- ⌨️ **Keyboard Shortcuts** — `/` focus search, `1-9` switch ke session ke-N, `Esc` close modal
+- 🔒 **Local & Secure** — Semua data tersimpan lokal, no telemetry
+- 📤 **Export / Import** — Backup JSON atau ZIP, restore lintas device
+- 🎨 **Editorial Dark UI** — Warm-dark, serif display, monospace UI, sharp amber accent
+- 🔐 **PIN Protection (PBKDF2)** — Hash 200K iterations + per-install salt, gate semua destructive action
+- 🔄 **Smart Auto Refresh** — Keep session valid + sanity check, gak overwrite kalo logout
+- ♿ **Accessible** — `role=dialog`, focus trap, `aria-live` announcements, reduced-motion safe
+- 🚀 **Fast & Lightweight** — No framework, vanilla JS, MV3
 
 ---
 
@@ -174,10 +178,24 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 🛠️ Tech Stack
 
-- **Manifest V3** - Latest Chrome Extension standard
-- **Vanilla JavaScript** - No framework dependencies
-- **Modern CSS** - Glassmorphism, gradients, animations
-- **Chrome APIs** - Storage, Cookies, Tabs, Scripting
+- **Manifest V3** — Latest Chrome Extension standard
+- **Vanilla JavaScript** — No framework dependencies
+- **Modern CSS** — Custom properties, no glassmorphism, semantic colors
+- **Web Crypto API** — PBKDF2 (SHA-256, 200K iter) for PIN hashing
+- **Chrome APIs** — Storage, Cookies, Tabs, Scripting, Action
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+K` / `⌘+K` | Open quick switcher (fuzzy search across all sites) |
+| `Ctrl+Shift+S` / `⌘+Shift+S` | Open the popup itself |
+| `/` | Focus search field |
+| `1` – `9` | Switch to nth session in current list |
+| `Esc` | Close any modal |
+| `Enter` | Submit current modal action |
 
 ---
 
@@ -208,7 +226,34 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 📝 Changelog
 
-### v1.7.0 (Current)
+### v1.8.1 (Current)
+- 🐛 **Fix: stuck loading di Instagram (dan site berat lainnya)** — root cause: IndexedDB IG penuh blob cache (foto, story, video) sampai ratusan MB, `getAll()` recursive serialize ngabisin tab. Sekarang:
+  - **Skip IDB total** untuk heavy hosts: instagram, facebook, messenger, twitter/x, tiktok, discord, youtube, linkedin, reddit, whatsapp. Cookies + localStorage cukup untuk restore auth di site-site ini.
+  - Untuk site lain: skip cache-like stores by name regex (`cache|blob|media|attachment|thumbnail|...`), cap 800 records/store, skip blob >256KB, total IDB cap 8MB.
+  - Per-operation timeout di tiap IDB call (open/count/getAll/getAllKeys).
+- 🐛 **Fix: `chrome.scripting.executeScript` tanpa timeout** — wrap dengan `Promise.race`. Extract 15s, restore 15s, clear 10s. Sebelumnya kalo page hang → popup loading forever.
+- 🐛 **Fix: total restore timeout cuma 2 detik** — naikin ke 15s. IG/site berat butuh 5–10s wajar. 2s gak realistic.
+- 🐛 **Fix: clear cookies + clear storage sequential** — ganti ke `Promise.allSettled` paralel dengan timeout per-step. Kalo IDB clear hang, cookies tetep kelar.
+- 🐛 **Fix: `clearStorage()` IDB delete bisa block** — kalo ada open connection di page, `deleteDatabase` nunggu forever. Sekarang per-DB hard cap 1.5s, lewat itu skip.
+- 🐛 **Fix: popup sendMessage tanpa timeout** — popup-side hard cap 30s. User dapet error message instead of stuck loading.
+
+### v1.8.0
+- ⚡ **Quick Switcher** — Ctrl+K / Cmd+K fuzzy search lintas semua site, cross-domain switch otomatis buka tab baru
+- 🔢 **Action Badge** — Jumlah session per domain tampil di icon toolbar (per-tab, auto-update)
+- 🔐 **PBKDF2 PIN** — SHA-256 single-round → PBKDF2 200K iterations + per-install random salt. Backward compat: legacy v1 hash auto-upgrade saat verify pertama. Constant-time compare.
+- 🔒 **PIN Gate Diperluas** — Sebelumnya cuma gating switch session. Sekarang juga: rename, delete, duplicate, replace, clear, export. PIN bukan lagi cosmetic.
+- 🐛 **Fix Critical: Auto-refresh data loss** — Sanity check sebelum overwrite. Kalo cookie count drop > 70% atau kosong total padahal stored ada, refresh di-abort. Gak nge-wipe saved login lagi.
+- 🐛 **Fix Critical: Cookie restore broken di Google/Microsoft** — Filter sekarang include parent-domain cookies (`.google.com` apply ke `accounts.google.com`). Sebelumnya banyak auth cookie ke-skip.
+- 🐛 **Fix Security: HTML attribute injection** — Render session list pakai `createElement` + `setAttribute` (bukan template literal innerHTML). Imported data gak bisa lagi corrupt UI / hijack click.
+- 🐛 **Fix Auto-refresh race** — Cek `tab.status === "complete"` sebelum capture, biar gak nangkap mid-redirect partial state.
+- 🐛 **Fix `parseInt` NaN propagation** — Order priority dengan input ngaco fallback ke `autoNext`, gak bikin badge `#NaN`.
+- 🐛 **Fix `formatDate(undefined)`** — Imported sessions tanpa `lastUsed` tampil `—` instead of "Invalid Date".
+- ♿ **A11y pass** — Semua modal dapet `role=dialog` / `role=alertdialog`, `aria-modal`, `aria-labelledby`. Focus trap aktif. Toast pakai `aria-live` region. Search field punya label. `prefers-reduced-motion` dihormati.
+- 🎨 **UI Redesign** — Ditch glassmorphism + Inter+Poppins+purple gradient. Aesthetic baru: editorial "developer journal" — Fraunces serif (display), JetBrains Mono (UI/numerik), Inter (body), warm-dark cream-on-charcoal, sharp amber accent (#f59e0b), crisp 1px borders, no over-animation.
+- 🧹 **Cleanup** — Drop `viewMode` dead code, drop `clearServiceWorkersAndCache` duplicate, drop empty `web_accessible_resources`, hardcoded version → manifest. About modal sekarang baca version dari `chrome.runtime.getManifest()`.
+- ⌨️ **Keyboard shortcuts** — `/` focus search, `1-9` switch nth session, `Ctrl+Shift+S` open popup. Modal Enter/Escape consistent.
+
+### v1.7.0
 - 🐛 Fix **#1 Cookie Restoration Race Condition** — tiap cookie kini punya timeout 5 detik via `Promise.race`, tidak bisa hang selamanya
 - 🐛 Fix **#2 Incognito Cookie Leak** — `getCookiesForDomain` kini menggunakan `cookieStoreId` dari tab target, bukan iterate semua stores
 - 🐛 Fix **#3 Storage Monitoring** — tambah fungsi `checkStorageUsage()` yang memantau penggunaan storage & warn jika > 50 MB
@@ -261,7 +306,7 @@ Untuk logout dan login dengan akun berbeda:
 
 - **Original Project**: [session-switcher2](https://github.com/kuronekony4n/session-switcher2) by kuronekony4n
 - **Modified by**: [Erzambayu](https://github.com/Erzambayu)
-- **UI/UX Modernization**: Dark mode, glassmorphism, modern animations
+- **v1.8.0 Overhaul**: Editorial dark UI redesign, PBKDF2 PIN, quick switcher, badge counter, a11y pass, critical bug fixes
 
 ---
 

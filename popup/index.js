@@ -427,16 +427,49 @@
       });
     }
     show(modalKey) {
-      if (this.modals[modalKey]) this.modals[modalKey].classList.add(CSS_CLASSES.SHOW);
+      const m = this.modals[modalKey];
+      if (!m) return;
+      this._lastFocus = document.activeElement;
+      m.classList.add(CSS_CLASSES.SHOW);
+      m.setAttribute("aria-hidden", "false");
+      // basic focus trap
+      this._activeKey = modalKey;
+      this._trapHandler = (e) => {
+        if (e.key !== "Tab") return;
+        const focusables = m.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      };
+      m.addEventListener("keydown", this._trapHandler);
     }
     hide(modalKey) {
-      if (this.modals[modalKey]) this.modals[modalKey].classList.remove(CSS_CLASSES.SHOW);
+      const m = this.modals[modalKey];
+      if (!m) return;
+      m.classList.remove(CSS_CLASSES.SHOW);
+      m.setAttribute("aria-hidden", "true");
+      if (this._activeKey === modalKey && this._trapHandler) {
+        m.removeEventListener("keydown", this._trapHandler);
+        this._trapHandler = null;
+        this._activeKey = null;
+      }
+      // restore focus
+      if (this._lastFocus && typeof this._lastFocus.focus === "function") {
+        try { this._lastFocus.focus(); } catch (_) {}
+      }
     }
   };
 
   // src/shared/utils/date.ts
   function formatDate(timestamp) {
-    return new Date(timestamp).toLocaleDateString(undefined, {
+    if (!timestamp || Number.isNaN(Number(timestamp))) return "—";
+    const d = new Date(Number(timestamp));
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -451,6 +484,14 @@
       this.container = container;
       if (this.container) {
         this.container.addEventListener("click", this.handleClick.bind(this));
+        this.container.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          const item = e.target.closest(`.${CSS_CLASSES.SESSION_ITEM}`);
+          if (!item) return;
+          if (e.target.closest(`.${CSS_CLASSES.SESSION_BTN}`)) return;
+          e.preventDefault();
+          if (this.onSessionClick) this.onSessionClick(item.dataset.sessionId);
+        });
       } else {
         console.error("SessionList: container element not found");
       }
@@ -466,80 +507,131 @@
         console.error("SessionList: Cannot render, container is null");
         return;
       }
-      let domainSessions = sessions.filter((s) => s.domain === currentDomain).sort((a, b) => a.order - b.order);
+      let domainSessions = sessions.filter((s) => s.domain === currentDomain).sort((a, b) => (a.order || 0) - (b.order || 0));
 
       // Apply search filter
       if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
-        domainSessions = domainSessions.filter(s => s.name.toLowerCase().includes(lowerQuery));
+        domainSessions = domainSessions.filter(s => (s.name || "").toLowerCase().includes(lowerQuery));
       }
 
       const activeSessionId = activeSessions[currentDomain];
       if (domainSessions.length === 0) {
         if (searchQuery) {
-          this.container.innerHTML = `<div class="empty-state"><p>No sessions found matching "${escapeHtml(searchQuery)}"</p></div>`;
+          this.container.replaceChildren();
+          const wrap = document.createElement("div");
+          wrap.className = "empty-state";
+          const p = document.createElement("p");
+          p.textContent = `No sessions found matching "${searchQuery}"`;
+          wrap.appendChild(p);
+          this.container.appendChild(wrap);
         } else {
           this.renderEmptyState();
         }
+        // sync count footer too
+        const countEl = document.getElementById("sessionCount");
+        if (countEl) countEl.textContent = "0 sessions";
         return;
       }
       this.renderSessions(domainSessions, activeSessionId);
     }
 
     renderEmptyState() {
-      this.container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">📭</div>
-          <p>${UI_TEXT.NO_SESSIONS}</p>
-          <button id="createFirstSessionBtnList" class="btn btn-primary btn-sm">Save Current Session</button>
-        </div>`;
-
-      // Add listener for the button in empty state
-      const btn = document.getElementById("createFirstSessionBtnList");
-      if (btn) {
-        btn.addEventListener("click", () => {
-          const saveBtn = document.getElementById("saveBtn");
-          if (saveBtn) saveBtn.click();
-        });
-      }
+      this.container.replaceChildren();
+      const wrap = document.createElement("div");
+      wrap.className = "empty-state";
+      const icon = document.createElement("div");
+      icon.className = "empty-icon";
+      icon.textContent = "·";
+      icon.setAttribute("aria-hidden", "true");
+      const p = document.createElement("p");
+      p.textContent = UI_TEXT.NO_SESSIONS;
+      const btn = document.createElement("button");
+      btn.id = "createFirstSessionBtnList";
+      btn.className = "btn btn-primary btn-sm";
+      btn.textContent = "Save current session";
+      btn.addEventListener("click", () => {
+        const saveBtn = document.getElementById("saveBtn");
+        if (saveBtn) saveBtn.click();
+      });
+      wrap.append(icon, p, btn);
+      this.container.appendChild(wrap);
     }
     renderSessions(sessions, activeSessionId) {
-      // Removed grid view support for cleaner UI
-      const sessionsHtml = sessions.map((session) => {
+      // DOM building (no innerHTML for user-controlled data) → safe against
+      // attribute-injection from imported session names / domains.
+      const frag = document.createDocumentFragment();
+      sessions.forEach((session) => {
         const isActive = session.id === activeSessionId;
-        const lastUsed = formatDate(session.lastUsed);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${session.domain}&sz=32`;
+        const item = document.createElement("div");
+        item.className = `${CSS_CLASSES.SESSION_ITEM}${isActive ? " " + CSS_CLASSES.ACTIVE : ""}`;
+        item.dataset.sessionId = session.id;
+        item.setAttribute("role", "button");
+        item.setAttribute("tabindex", "0");
+        item.setAttribute("aria-label", `Switch to session ${session.name}`);
 
-        return `
-        <div class="${CSS_CLASSES.SESSION_ITEM} ${isActive ? CSS_CLASSES.ACTIVE : ""}" data-session-id="${session.id}">
-          <div class="session-info">
-            <div class="session-name">
-              <img src="${faviconUrl}" alt="" style="width: 16px; height: 16px; margin-right: 8px; border-radius: 2px;">
-              <span class="session-badge">#${session.order}</span> 
-              ${escapeHtml(session.name)}
-            </div>
-            <div class="session-meta">${UI_TEXT.LAST_USED} ${lastUsed}</div>
-          </div>
-          <div class="session-actions">
-            <button class="${CSS_CLASSES.SESSION_BTN} duplicate-btn" data-action="duplicate" data-session-id="${session.id}" title="Duplicate">
-              📋
-            </button>
-            <button class="${CSS_CLASSES.SESSION_BTN} rename-btn" data-action="rename" data-session-id="${session.id}" title="Edit">
-              ✏️
-            </button>
-            <button class="${CSS_CLASSES.SESSION_BTN} delete-btn" data-action="delete" data-session-id="${session.id}" title="Delete">
-              🗑️
-            </button>
-          </div>
-        </div>
-      `;
-      }).join("");
-      this.container.innerHTML = sessionsHtml;
+        // info column
+        const info = document.createElement("div");
+        info.className = "session-info";
+        const nameRow = document.createElement("div");
+        nameRow.className = "session-name";
+        const fav = document.createElement("img");
+        fav.className = "session-favicon";
+        fav.alt = "";
+        fav.width = 16;
+        fav.height = 16;
+        fav.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(session.domain || "")}&sz=32`;
+        nameRow.appendChild(fav);
+        const badge = document.createElement("span");
+        badge.className = "session-badge";
+        badge.textContent = `#${Number.isFinite(session.order) ? session.order : "?"}`;
+        nameRow.appendChild(badge);
+        const nameTxt = document.createElement("span");
+        nameTxt.className = "session-name-text";
+        nameTxt.textContent = session.name || UI_TEXT.UNNAMED_SESSION;
+        nameRow.appendChild(nameTxt);
+        if (isActive) {
+          const dot = document.createElement("span");
+          dot.className = "active-dot";
+          dot.setAttribute("aria-label", "active");
+          dot.title = "Active session";
+          nameRow.appendChild(dot);
+        }
+        info.appendChild(nameRow);
+        const meta = document.createElement("div");
+        meta.className = "session-meta";
+        meta.textContent = `${UI_TEXT.LAST_USED} ${formatDate(session.lastUsed)}`;
+        info.appendChild(meta);
+
+        // actions
+        const actions = document.createElement("div");
+        actions.className = "session-actions";
+        const mkBtn = (action, label, icon) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = `${CSS_CLASSES.SESSION_BTN} ${action}-btn`;
+          b.dataset.action = action;
+          b.dataset.sessionId = session.id;
+          b.title = label;
+          b.setAttribute("aria-label", `${label} ${session.name}`);
+          b.textContent = icon;
+          return b;
+        };
+        actions.appendChild(mkBtn("duplicate", "Duplicate", "⎘"));
+        actions.appendChild(mkBtn("rename", "Edit", "✎"));
+        actions.appendChild(mkBtn("delete", "Delete", "✕"));
+
+        item.appendChild(info);
+        item.appendChild(actions);
+        frag.appendChild(item);
+      });
+      this.container.replaceChildren(frag);
 
       // Update session count in footer
       const countEl = document.getElementById("sessionCount");
       if (countEl) {
-        countEl.textContent = `${sessions.length} session${sessions.length !== 1 ? 's' : ''}`;
+        const n = sessions.length;
+        countEl.textContent = `${n} session${n !== 1 ? "s" : ""}`;
       }
     }
     handleClick(e) {
@@ -593,9 +685,10 @@
   var STORAGE_KEYS = {
     SESSIONS: "sessions",
     ACTIVE_SESSIONS: "activeSessions",
-    VIEW_MODE: "viewMode",
     PIN_HASH: "pinHash",
-    PIN_ENABLED: "pinEnabled"
+    PIN_SALT: "pinSalt",
+    PIN_ENABLED: "pinEnabled",
+    PIN_VERSION: "pinVersion"
   };
 
   // src/shared/utils/idGenerator.ts
@@ -618,32 +711,32 @@
       }
       return tabs[0];
     }
-    async sendMessage(message) {
+    async sendMessage(message, timeoutMs = 30000) {
       return new Promise((resolve) => {
+        let settled = false;
+        const finish = (resp) => { if (!settled) { settled = true; resolve(resp); } };
+        const timer = setTimeout(() => {
+          finish({ success: false, error: "Background did not respond in time. The page may be busy or unresponsive." });
+        }, timeoutMs);
         try {
           chrome.runtime.sendMessage(message, (response) => {
+            clearTimeout(timer);
             if (chrome.runtime.lastError) {
               console.error("Chrome runtime error:", chrome.runtime.lastError);
-              resolve({
+              finish({
                 success: false,
                 error: chrome.runtime.lastError.message || "Could not establish connection. Receiving end does not exist."
               });
             } else if (!response) {
-              console.error("No response received from background script");
-              resolve({
-                success: false,
-                error: "No response received from background script"
-              });
+              finish({ success: false, error: "No response received from background script" });
             } else {
-              resolve(response);
+              finish(response);
             }
           });
         } catch (error) {
+          clearTimeout(timer);
           console.error("Error sending message:", error);
-          resolve({
-            success: false,
-            error: error instanceof Error ? error.message : String(error)
-          });
+          finish({ success: false, error: error instanceof Error ? error.message : String(error) });
         }
       });
     }
@@ -665,8 +758,7 @@
         sessions: [],
         activeSessions: {},
         currentRenameSessionId: "",
-        currentDeleteSessionId: "",
-        viewMode: "list"
+        currentDeleteSessionId: ""
       };
     }
     async initialize() {
@@ -695,10 +787,12 @@
         }
         const storedSession = response.data ?? storedSessionDefaultValue;
         const domainSessions = this.state.sessions.filter((s) => s.domain === this.state.currentDomain);
-        if (order === void 0 || order === "") {
-          order = domainSessions.length > 0 ? Math.max(...domainSessions.map((s) => s.order || 0)) + 1 : 1;
+        const autoNext = domainSessions.length > 0 ? Math.max(...domainSessions.map((s) => s.order || 0)) + 1 : 1;
+        if (order === void 0 || order === "" || order === null) {
+          order = autoNext;
         } else {
-          order = parseInt(order, 10);
+          const parsed = parseInt(order, 10);
+          order = Number.isFinite(parsed) ? parsed : autoNext;
         }
 
         // Auto-increment orders if collision
@@ -897,29 +991,21 @@
       try {
         const result = await this.chromeApi.getStorageData([
           STORAGE_KEYS.SESSIONS,
-          STORAGE_KEYS.ACTIVE_SESSIONS,
-          STORAGE_KEYS.VIEW_MODE
+          STORAGE_KEYS.ACTIVE_SESSIONS
         ]);
         this.state.sessions = result[STORAGE_KEYS.SESSIONS] || [];
         this.state.activeSessions = result[STORAGE_KEYS.ACTIVE_SESSIONS] || {};
-        this.state.viewMode = result[STORAGE_KEYS.VIEW_MODE] || "list";
       } catch (error) {
         console.error("Error loading storage data:", error);
         this.state.sessions = [];
         this.state.activeSessions = {};
-        this.state.viewMode = "list";
       }
     }
     async saveStorageData() {
       await this.chromeApi.setStorageData({
         [STORAGE_KEYS.SESSIONS]: this.state.sessions,
-        [STORAGE_KEYS.ACTIVE_SESSIONS]: this.state.activeSessions,
-        [STORAGE_KEYS.VIEW_MODE]: this.state.viewMode
+        [STORAGE_KEYS.ACTIVE_SESSIONS]: this.state.activeSessions
       });
-    }
-    async setViewMode(mode) {
-      this.state.viewMode = mode;
-      await this.saveStorageData();
     }
     async autoRefreshActiveSession() {
       try {
@@ -962,14 +1048,38 @@
         return null;
       }
     }
-    // PIN Security Functions
-    async hashPin(pin) {
-      // Simple hash using Web Crypto API
-      const encoder = new TextEncoder();
-      const data = encoder.encode(pin + "session_switcher_salt");
-      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    // PIN Security Functions — PBKDF2 (200K iter, random per-install salt, AES-fit key)
+    // Backward compat: legacy SHA-256 hashes (no salt stored) auto-upgrade on next successful verify.
+    async hashPin(pin, saltB64) {
+      const enc = new TextEncoder();
+      const salt = saltB64 ? this._b64ToBytes(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw", enc.encode(pin), { name: "PBKDF2" }, false, ["deriveBits"]
+      );
+      const bits = await crypto.subtle.deriveBits(
+        { name: "PBKDF2", salt, iterations: 2e5, hash: "SHA-256" },
+        keyMaterial,
+        256
+      );
+      const hashB64 = this._bytesToB64(new Uint8Array(bits));
+      const finalSaltB64 = saltB64 || this._bytesToB64(salt);
+      return { hash: hashB64, salt: finalSaltB64 };
+    }
+    async _legacyHashPin(pin) {
+      const data = new TextEncoder().encode(pin + "session_switcher_salt");
+      const buf = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+    _bytesToB64(bytes) {
+      let s = "";
+      for (let i = 0; i < bytes.byteLength; i++) s += String.fromCharCode(bytes[i]);
+      return btoa(s);
+    }
+    _b64ToBytes(b64) {
+      const bin = atob(b64);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
     }
     async setupPin(pin) {
       try {
@@ -979,9 +1089,11 @@
         if (!/^\d+$/.test(pin)) {
           throw new Error("PIN must contain only numbers");
         }
-        const hash = await this.hashPin(pin);
+        const { hash, salt } = await this.hashPin(pin);
         await this.chromeApi.setStorageData({
           [STORAGE_KEYS.PIN_HASH]: hash,
+          [STORAGE_KEYS.PIN_SALT]: salt,
+          [STORAGE_KEYS.PIN_VERSION]: 2,
           [STORAGE_KEYS.PIN_ENABLED]: true
         });
         return true;
@@ -992,15 +1104,43 @@
     }
     async verifyPin(pin) {
       try {
-        const result = await this.chromeApi.getStorageData([STORAGE_KEYS.PIN_HASH]);
+        const result = await this.chromeApi.getStorageData([
+          STORAGE_KEYS.PIN_HASH,
+          STORAGE_KEYS.PIN_SALT,
+          STORAGE_KEYS.PIN_VERSION
+        ]);
         const storedHash = result[STORAGE_KEYS.PIN_HASH];
+        const storedSalt = result[STORAGE_KEYS.PIN_SALT];
+        const version = result[STORAGE_KEYS.PIN_VERSION] || 1;
         if (!storedHash) return false;
-        const inputHash = await this.hashPin(pin);
-        return inputHash === storedHash;
+        if (version >= 2 && storedSalt) {
+          const { hash } = await this.hashPin(pin, storedSalt);
+          return this._safeEqual(hash, storedHash);
+        }
+        // Legacy v1: SHA-256(pin + static salt). Verify, and on success silently upgrade.
+        const legacy = await this._legacyHashPin(pin);
+        const ok = this._safeEqual(legacy, storedHash);
+        if (ok) {
+          try {
+            const { hash, salt } = await this.hashPin(pin);
+            await this.chromeApi.setStorageData({
+              [STORAGE_KEYS.PIN_HASH]: hash,
+              [STORAGE_KEYS.PIN_SALT]: salt,
+              [STORAGE_KEYS.PIN_VERSION]: 2
+            });
+          } catch (_) {}
+        }
+        return ok;
       } catch (error) {
         console.error("Error verifying PIN:", error);
         return false;
       }
+    }
+    _safeEqual(a, b) {
+      if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+      let diff = 0;
+      for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+      return diff === 0;
     }
     async isPinEnabled() {
       try {
@@ -1032,6 +1172,8 @@
       try {
         await this.chromeApi.setStorageData({
           [STORAGE_KEYS.PIN_HASH]: null,
+          [STORAGE_KEYS.PIN_SALT]: null,
+          [STORAGE_KEYS.PIN_VERSION]: null,
           [STORAGE_KEYS.PIN_ENABLED]: false
         });
       } catch (error) {
@@ -1129,26 +1271,22 @@
     }
   };
 
-  // Reusable toast notification
+  // Reusable toast notification — class-based + announces via #toastLive aria-live region
   function showToast(message, type = "success") {
-    const bgMap = {
-      success: "linear-gradient(135deg,#10b981,#059669)",
-      error: "linear-gradient(135deg,#f43f5e,#dc2626)",
-      info: "linear-gradient(135deg,#3b82f6,#2563eb)"
-    };
-    const shadowMap = {
-      success: "rgba(16,185,129,0.4)",
-      error: "rgba(244,63,94,0.4)",
-      info: "rgba(59,130,246,0.4)"
-    };
+    const liveEl = document.getElementById("toastLive");
+    if (liveEl) {
+      // toggle to ensure SR re-announces even repeated msgs
+      liveEl.textContent = "";
+      setTimeout(() => { liveEl.textContent = message; }, 30);
+    }
     const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    toast.style.cssText = `position:fixed;top:20px;left:50%;transform:translateX(-50%);background:${bgMap[type] || bgMap.success};color:white;padding:10px 20px;border-radius:8px;font-weight:600;z-index:99999;box-shadow:0 4px 20px ${shadowMap[type] || shadowMap.success};font-size:13px;max-width:320px;text-align:center;white-space:nowrap;`;
     document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add("toast-in"));
     setTimeout(() => {
-      toast.style.transition = "opacity 0.3s";
-      toast.style.opacity = "0";
-      setTimeout(() => toast.remove(), 300);
+      toast.classList.remove("toast-in");
+      setTimeout(() => toast.remove(), 220);
     }, 2500);
   }
 
@@ -1215,6 +1353,12 @@
         currentSiteEl.textContent = state.currentDomain;
         currentSiteEl.title = state.currentDomain;
       }
+      // populate version from manifest
+      try {
+        const m = chrome.runtime.getManifest();
+        const v = document.getElementById("aboutVersion");
+        if (v && m && m.version) v.textContent = `v${m.version}`;
+      } catch (_) {}
       renderSessionList();
 
       // Auto refresh active session in background (non-blocking)
@@ -1259,10 +1403,23 @@
     if (menuBtn && menuDropdown) {
       menuBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        menuDropdown.classList.toggle("show");
+        const open = menuDropdown.classList.toggle("show");
+        menuBtn.setAttribute("aria-expanded", String(open));
       });
       document.addEventListener("click", () => {
-        menuDropdown.classList.remove("show");
+        if (menuDropdown.classList.contains("show")) {
+          menuDropdown.classList.remove("show");
+          menuBtn.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
+    // Quick switcher trigger button
+    const qsTrigger = document.getElementById("quickSwitcherTrigger");
+    if (qsTrigger) {
+      qsTrigger.addEventListener("click", (e) => {
+        e.stopPropagation();
+        // Defer: qsOpen defined after; bind via dispatched event
+        document.dispatchEvent(new CustomEvent("__open_quickswitcher"));
       });
     }
 
@@ -1343,7 +1500,8 @@
         }
       },
       {
-        id: "replaceSessionBtn", handler: () => {
+        id: "replaceSessionBtn", handler: async () => {
+          if (!await requirePin("Update session with current data")) return;
           const state = popupService.getState();
           const session = popupService.getSession(state.currentRenameSessionId);
           if (session) {
@@ -1398,6 +1556,7 @@
       {
         id: "confirmClearSession", handler: async () => {
           const option = modalManager.getClearSessionOption();
+          if (!await requirePin(option === "all" ? "Clear ALL sessions" : "Clear sessions for this site")) return;
           await loadingManager.withLoading(async () => {
             try {
               await popupService.clearSessions(option);
@@ -1411,6 +1570,7 @@
       },
       {
         id: "exportBtn", handler: async () => {
+          if (!await requirePin("Export session data")) return;
           try {
             const option = modalManager.getExportOption();
             const format = modalManager.getExportFormat();
@@ -1445,6 +1605,7 @@
               document.body.removeChild(a);
               URL.revokeObjectURL(url);
             }
+            showToast("Backup downloaded — contains plaintext credentials", "info");
           } catch (error) {
             modalManager.showErrorModal(handleError(error, "Export Sessions"));
           }
@@ -1518,6 +1679,24 @@
 
     // Pending session ID for PIN verification
     let pendingSessionId = null;
+    // Generic PIN gate — returns Promise<bool>. Reuses pinVerifyModal.
+    let pendingPinResolver = null;
+    async function requirePin(reasonText) {
+      const enabled = await popupService.isPinEnabled();
+      if (!enabled) return true;
+      // If a previous unrelated request is still pending, cancel it (resolve false).
+      if (pendingPinResolver) {
+        try { pendingPinResolver(false); } catch (_) {}
+        pendingPinResolver = null;
+      }
+      const reasonEl = document.getElementById("pinVerifyReason");
+      if (reasonEl) reasonEl.textContent = reasonText || "";
+      pendingSessionId = null; // ensure switch-flow code path doesn't trigger
+      modalManager.showPinVerifyModal();
+      return new Promise((resolve) => {
+        pendingPinResolver = resolve;
+      });
+    }
 
     const confirmPinVerifyBtn = document.getElementById("confirmPinVerify");
     if (confirmPinVerifyBtn) {
@@ -1528,23 +1707,43 @@
           return;
         }
         const isValid = await popupService.verifyPin(pin);
-        if (isValid) {
-          modalManager.hidePinVerifyModal();
-          // Proceed with session switch
-          if (pendingSessionId) {
+        if (!isValid) {
+          modalManager.showPinVerifyError("Incorrect PIN");
+          return;
+        }
+        modalManager.hidePinVerifyModal();
+        // Path A: generic gate via requirePin()
+        if (pendingPinResolver) {
+          const r = pendingPinResolver;
+          pendingPinResolver = null;
+          r(true);
+          return;
+        }
+        // Path B: switch-flow
+        if (pendingSessionId) {
+          const sid = pendingSessionId;
+          pendingSessionId = null;
+          await loadingManager.withLoading(async () => {
             try {
-              await popupService.switchToSession(pendingSessionId);
+              await popupService.switchToSession(sid);
               renderSessionList();
-              pendingSessionId = null;
             } catch (error) {
               modalManager.showErrorModal(handleError(error, "Switch Session"));
             }
-          }
-        } else {
-          modalManager.showPinVerifyError("Incorrect PIN");
+          });
         }
       });
     }
+    // Resolve gate as false on close
+    [
+      "closePinVerifyModal", "cancelPinVerify"
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("click", () => {
+        if (pendingPinResolver) { const r = pendingPinResolver; pendingPinResolver = null; r(false); }
+        pendingSessionId = null;
+      });
+    });
 
     const changePinBtn = document.getElementById("changePinBtn");
     if (changePinBtn) {
@@ -1578,6 +1777,8 @@
         const pinEnabled = await popupService.isPinEnabled();
         if (pinEnabled) {
           pendingSessionId = sessionId;
+          const reasonEl = document.getElementById("pinVerifyReason");
+          if (reasonEl) reasonEl.textContent = "Switch session";
           modalManager.showPinVerifyModal();
         } else {
           await loadingManager.withLoading(async () => {
@@ -1590,14 +1791,16 @@
           });
         }
       },
-      onRenameClick: (sessionId) => {
+      onRenameClick: async (sessionId) => {
+        if (!await requirePin("Edit session")) return;
         const session = popupService.getSession(sessionId);
         if (session) {
           popupService.setState({ currentRenameSessionId: sessionId });
           modalManager.showRenameModal(session.name, session.order);
         }
       },
-      onDeleteClick: (sessionId) => {
+      onDeleteClick: async (sessionId) => {
+        if (!await requirePin("Delete session")) return;
         const session = popupService.getSession(sessionId);
         if (session) {
           popupService.setState({ currentDeleteSessionId: sessionId });
@@ -1605,11 +1808,12 @@
         }
       },
       onDuplicateClick: async (sessionId) => {
+        if (!await requirePin("Duplicate session")) return;
         await loadingManager.withLoading(async () => {
           try {
             await popupService.duplicateSession(sessionId);
             renderSessionList();
-            showToast("✅ Session duplicated!");
+            showToast("Session duplicated", "success");
           } catch (error) {
             modalManager.showErrorModal(handleError(error, "Duplicate Session"));
           }
@@ -1620,6 +1824,198 @@
     btnHandlers.forEach(({ id, handler }) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener("click", handler);
+    });
+
+    // ============================================================
+    // Quick Switcher (Ctrl/Cmd+K) — cross-domain fuzzy search
+    // ============================================================
+    const qsModal = document.getElementById("quickSwitcherModal");
+    const qsInput = document.getElementById("quickSwitcherInput");
+    const qsResults = document.getElementById("quickSwitcherResults");
+    let qsActiveIdx = 0;
+    let qsRows = [];
+
+    function fuzzyScore(needle, haystack) {
+      if (!needle) return 1;
+      const n = needle.toLowerCase();
+      const h = haystack.toLowerCase();
+      if (h.includes(n)) return 100 - h.indexOf(n);
+      // subsequence match
+      let hi = 0, score = 0;
+      for (let i = 0; i < n.length; i++) {
+        const idx = h.indexOf(n[i], hi);
+        if (idx === -1) return 0;
+        score += 10 - Math.min(9, idx - hi);
+        hi = idx + 1;
+      }
+      return score;
+    }
+    function renderQsResults(query) {
+      const state = popupService.getState();
+      const all = state.sessions.slice();
+      const ranked = all
+        .map((s) => ({ s, score: fuzzyScore(query, `${s.name} ${s.domain}`) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 50);
+      qsResults.replaceChildren();
+      qsRows = [];
+      qsActiveIdx = 0;
+      if (ranked.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "qs-empty";
+        empty.textContent = query ? `No matches for "${query}"` : "Start typing to search.";
+        qsResults.appendChild(empty);
+        return;
+      }
+      ranked.forEach(({ s }, i) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "qs-row";
+        row.setAttribute("role", "option");
+        row.dataset.sessionId = s.id;
+        row.dataset.domain = s.domain || "";
+        const dot = document.createElement("span");
+        dot.className = "qs-dot";
+        dot.style.background = colorFromString(s.domain || "");
+        const main = document.createElement("div");
+        main.className = "qs-main";
+        const name = document.createElement("div");
+        name.className = "qs-name";
+        name.textContent = s.name || UI_TEXT.UNNAMED_SESSION;
+        const sub = document.createElement("div");
+        sub.className = "qs-sub";
+        sub.textContent = s.domain || "—";
+        main.append(name, sub);
+        const right = document.createElement("span");
+        right.className = "qs-tag";
+        right.textContent = `#${Number.isFinite(s.order) ? s.order : "?"}`;
+        if (s.domain === state.currentDomain) {
+          const here = document.createElement("span");
+          here.className = "qs-here";
+          here.textContent = "here";
+          right.before(here);
+        }
+        row.append(dot, main, right);
+        if (i === 0) row.classList.add("qs-active");
+        row.addEventListener("mouseenter", () => setQsActive(i));
+        row.addEventListener("click", () => qsCommit());
+        qsResults.appendChild(row);
+        qsRows.push({ el: row, session: s });
+      });
+    }
+    function colorFromString(str) {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+      const hue = Math.abs(h) % 360;
+      return `hsl(${hue}, 65%, 55%)`;
+    }
+    function setQsActive(idx) {
+      if (qsRows.length === 0) return;
+      qsActiveIdx = (idx + qsRows.length) % qsRows.length;
+      qsRows.forEach((r, i) => r.el.classList.toggle("qs-active", i === qsActiveIdx));
+      qsRows[qsActiveIdx].el.scrollIntoView({ block: "nearest" });
+    }
+    async function qsCommit() {
+      const row = qsRows[qsActiveIdx];
+      if (!row) return;
+      const session = row.session;
+      const state = popupService.getState();
+      qsClose();
+      // PIN gate
+      if (!await requirePin(`Switch to "${session.name}"`)) return;
+      if (session.domain === state.currentDomain) {
+        // same domain → just switch in place
+        await loadingManager.withLoading(async () => {
+          try {
+            await popupService.switchToSession(session.id);
+            renderSessionList();
+            showToast(`Switched to "${session.name}"`, "success");
+          } catch (error) {
+            modalManager.showErrorModal(handleError(error, "Switch Session"));
+          }
+        });
+        return;
+      }
+      // Cross-domain: open new tab to that domain, after loaded inject session via background
+      try {
+        const newTab = await chrome.tabs.create({ url: `https://${session.domain}/`, active: true });
+        // wait for tab to reach 'complete' (one-shot)
+        await new Promise((resolve) => {
+          const listener = (tabId, info) => {
+            if (tabId === newTab.id && info.status === "complete") {
+              chrome.tabs.onUpdated.removeListener(listener);
+              resolve();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+          // safety timeout
+          setTimeout(() => {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }, 8000);
+        });
+        const resp = await new Promise((res) => {
+          chrome.runtime.sendMessage({
+            action: MESSAGE_ACTIONS.SWITCH_SESSION,
+            sessionData: session,
+            tabId: newTab.id
+          }, res);
+        });
+        if (resp && resp.success) {
+          showToast(`Opened "${session.name}" in new tab`, "success");
+          // self-close popup window
+          window.close();
+        } else {
+          modalManager.showErrorModal(`Failed to apply session: ${resp && resp.error || "unknown"}`);
+        }
+      } catch (e) {
+        modalManager.showErrorModal(handleError(e, "Quick Switch"));
+      }
+    }
+    function qsOpen() {
+      if (!qsModal) return;
+      qsInput.value = "";
+      renderQsResults("");
+      qsModal.classList.add(CSS_CLASSES.SHOW);
+      setTimeout(() => qsInput.focus(), 30);
+    }
+    function qsClose() {
+      if (!qsModal) return;
+      qsModal.classList.remove(CSS_CLASSES.SHOW);
+    }
+    if (qsInput) {
+      qsInput.addEventListener("input", () => renderQsResults(qsInput.value.trim()));
+      qsInput.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") { e.preventDefault(); setQsActive(qsActiveIdx + 1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); setQsActive(qsActiveIdx - 1); }
+        else if (e.key === "Enter") { e.preventDefault(); qsCommit(); }
+        else if (e.key === "Escape") { e.preventDefault(); qsClose(); }
+      });
+    }
+    if (qsModal) {
+      qsModal.addEventListener("click", (e) => { if (e.target === qsModal) qsClose(); });
+    }
+    // Hook trigger button via custom event (button bound earlier in init)
+    document.addEventListener("__open_quickswitcher", () => qsOpen());
+    document.addEventListener("keydown", (e) => {
+      const isMac = navigator.platform.toUpperCase().includes("MAC");
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (qsModal && qsModal.classList.contains(CSS_CLASSES.SHOW)) qsClose(); else qsOpen();
+      }
+      // "/" focuses search bar
+      if (e.key === "/" && document.activeElement && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+        const search = document.getElementById("searchSessions");
+        if (search) { e.preventDefault(); search.focus(); }
+      }
+      // Number keys 1-9 → switch to nth session in current list
+      if (!mod && /^[1-9]$/.test(e.key) && document.activeElement && document.activeElement.tagName !== "INPUT") {
+        const idx = parseInt(e.key, 10) - 1;
+        const items = document.querySelectorAll(`.${CSS_CLASSES.SESSION_ITEM}`);
+        if (items[idx]) { e.preventDefault(); items[idx].click(); }
+      }
     });
   });
 })();

@@ -3,8 +3,7 @@
   // src/shared/constants/storageKeys.ts
   var STORAGE_KEYS = {
     SESSIONS: "sessions",
-    ACTIVE_SESSIONS: "activeSessions",
-    VIEW_MODE: "viewMode"
+    ACTIVE_SESSIONS: "activeSessions"
   };
 
   // src/shared/utils/errorHandling.ts
@@ -28,7 +27,7 @@
 
   // src/background/handlers/cookie.handler.ts
   var CookieHandler = class {
-    // Fix #2: Accept tabId so we only read from the tab's specific cookie store,
+    // Accept tabId so we only read from the tab's specific cookie store,
     // preventing accidental reads from incognito / other profile stores.
     async getCookiesForDomain(domain, tabId) {
       try {
@@ -44,10 +43,22 @@
           }
         }
         const cookies = await chrome.cookies.getAll({ storeId });
+        // Fix B2: Include apex/parent-domain cookies (e.g. `.google.com` cookies must
+        // also restore for `accounts.google.com`). Match if:
+        //   - cookie domain == cleanDomain (exact host)
+        //   - cookie domain == ".cleanDomain" or "cleanDomain" suffix matches (subdomain of stored)
+        //   - cleanDomain is a subdomain of the cookie's apex (e.g. cleanDomain="accounts.google.com",
+        //     cookieDomain=".google.com"  → must include)
+        //   - localhost edge
         return cookies.filter((cookie) => {
-          return cookie.domain === cleanDomain ||
-            cookie.domain.endsWith("." + cleanDomain) ||
-            (cleanDomain === "localhost" && cookie.domain === "localhost");
+          const cd = cookie.domain.replace(/^\./, "");
+          if (cd === cleanDomain) return true;
+          if (cleanDomain === "localhost" && cd === "localhost") return true;
+          // Cookie set on a parent domain → applies to subdomain `cleanDomain`
+          if (cleanDomain.endsWith("." + cd)) return true;
+          // Stored cookie itself a subdomain of the queried cleanDomain (legacy behavior)
+          if (cd.endsWith("." + cleanDomain)) return true;
+          return false;
         });
       } catch (error) {
         console.error("Error getting cookies for domain:", domain, error);
@@ -164,11 +175,32 @@
   };
 
   // src/background/services/storageData.service.ts
+  // NOTE: extractStorageData / injectStorageData run in the page's MAIN world via
+  // chrome.scripting.executeScript — they do NOT have access to outer-scope variables.
+  // All caps/regex/host lists must live inside the function body.
   async function extractStorageData() {
     try {
-      // Exclude WhatsApp from storage extraction to prevent issues with large data
-      if (window.location.hostname.includes("whatsapp.com")) {
-        return { localStorage: {}, sessionStorage: {}, indexedDB: {} };
+      const host = (window.location.hostname || "").toLowerCase();
+      const isHeavyHost = host && [
+        "whatsapp.com","web.whatsapp.com",
+        "instagram.com","www.instagram.com",
+        "facebook.com","www.facebook.com","messenger.com",
+        "twitter.com","x.com",
+        "tiktok.com","www.tiktok.com",
+        "discord.com",
+        "youtube.com","www.youtube.com","music.youtube.com",
+        "linkedin.com","www.linkedin.com",
+        "reddit.com","www.reddit.com"
+      ].some((h) => host === h || host.endsWith("." + h));
+      const HEAVY_STORE_REGEX = /(cache|blob|media|attachment|thumbnail|image|video|asset|preview|_idb_kv)/i;
+      const MAX_RECORDS_PER_STORE = 800;
+      const MAX_VALUE_BYTES = 256 * 1024;
+      const MAX_TOTAL_IDB_BYTES = 8 * 1024 * 1024;
+      let idbBytesUsed = 0;
+
+      // WhatsApp: legacy full-skip behavior
+      if (host.includes("whatsapp.com")) {
+        return { localStorage: {}, sessionStorage: {}, indexedDB: {}, _heavy: true };
       }
 
       const blobToBase64 = (blob) => {
@@ -183,15 +215,18 @@
       const serialize = async (obj) => {
         if (!obj) return obj;
         if (obj instanceof Blob || obj instanceof File) {
+          if (obj.size > MAX_VALUE_BYTES) return { __type: "BlobSkipped", size: obj.size, mime: obj.type };
           const base64 = await blobToBase64(obj);
           return { __type: "Blob", data: base64, type: obj.type };
         }
         if (obj instanceof ArrayBuffer) {
+          if (obj.byteLength > MAX_VALUE_BYTES) return { __type: "ArrayBufferSkipped", size: obj.byteLength };
           const blob = new Blob([obj]);
           const base64 = await blobToBase64(blob);
           return { __type: "ArrayBuffer", data: base64 };
         }
         if (obj instanceof Uint8Array) {
+          if (obj.byteLength > MAX_VALUE_BYTES) return { __type: "Uint8ArraySkipped", size: obj.byteLength };
           const blob = new Blob([obj]);
           const base64 = await blobToBase64(blob);
           return { __type: "Uint8Array", data: base64 };
@@ -231,79 +266,115 @@
       }
 
       const indexedDBData = {};
+      // Heavy hosts: skip IDB entirely. Cookies + localStorage carry auth.
+      if (isHeavyHost) {
+        return {
+          localStorage: localStorageData,
+          sessionStorage: sessionStorageData,
+          indexedDB: indexedDBData,
+          _heavy: true
+        };
+      }
+
       try {
-        const dbs = await indexedDB.databases();
-        for (const dbInfo of dbs) {
+        const dbs = (typeof indexedDB.databases === "function") ? await indexedDB.databases() : [];
+        outer: for (const dbInfo of dbs) {
           if (!dbInfo.name) continue;
+          if (idbBytesUsed > MAX_TOTAL_IDB_BYTES) {
+            console.warn("[Extract] IDB total byte cap reached, skipping remaining DBs");
+            break;
+          }
 
-          // Skip potentially huge/problematic databases if needed, but for now try to capture all
-          // with better serialization.
-
-          const db = await new Promise((resolve, reject) => {
-            const req = indexedDB.open(dbInfo.name);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-            req.onblocked = () => reject(new Error("Blocked"));
-            // Add timeout
-            setTimeout(() => reject(new Error("Timeout opening DB")), 3000);
-          });
-
-          const dbData = { version: db.version, stores: {} };
-          const tx = db.transaction(db.objectStoreNames, "readonly");
-
-          for (const storeName of db.objectStoreNames) {
-            // Optimization: Skip known huge stores for WhatsApp to prevent hang/crash
-            // These stores typically contain message history/media which can be GBs.
-            if (window.location.hostname.includes("whatsapp.com") &&
-              (storeName === "msgs" || storeName === "message" || storeName === "chat" || storeName === "model-storage")) {
-              console.log(`Skipping heavy store: ${storeName}`);
-              continue;
-            }
-
-            const store = tx.objectStore(storeName);
-            const schema = {
-              keyPath: store.keyPath,
-              autoIncrement: store.autoIncrement,
-              indexes: []
-            };
-            for (const indexName of store.indexNames) {
-              const idx = store.index(indexName);
-              schema.indexes.push({
-                name: indexName,
-                keyPath: idx.keyPath,
-                unique: idx.unique,
-                multiEntry: idx.multiEntry
-              });
-            }
-
-            const records = await new Promise((resolve, reject) => {
-              const req = store.getAll();
+          let db;
+          try {
+            db = await new Promise((resolve, reject) => {
+              const req = indexedDB.open(dbInfo.name);
               req.onsuccess = () => resolve(req.result);
               req.onerror = () => reject(req.error);
+              req.onblocked = () => reject(new Error("Blocked"));
+              setTimeout(() => reject(new Error("Timeout opening DB")), 2500);
             });
+          } catch (e) {
+            console.warn(`[Extract] Skip DB ${dbInfo.name}:`, e.message || e);
+            continue;
+          }
 
-            let keys = undefined;
-            if (!store.keyPath) {
-              keys = await new Promise((resolve, reject) => {
-                const req = store.getAllKeys();
+          const dbData = { version: db.version, stores: {} };
+
+          for (const storeName of db.objectStoreNames) {
+            // Skip cache-like stores by name
+            if (HEAVY_STORE_REGEX.test(storeName)) {
+              console.log(`[Extract] Skipping cache-like store: ${dbInfo.name}/${storeName}`);
+              continue;
+            }
+            try {
+              const tx = db.transaction([storeName], "readonly");
+              const store = tx.objectStore(storeName);
+              const schema = {
+                keyPath: store.keyPath,
+                autoIncrement: store.autoIncrement,
+                indexes: []
+              };
+              for (const indexName of store.indexNames) {
+                const idx = store.index(indexName);
+                schema.indexes.push({
+                  name: indexName,
+                  keyPath: idx.keyPath,
+                  unique: idx.unique,
+                  multiEntry: idx.multiEntry
+                });
+              }
+
+              // Count first to bail on huge stores
+              const count = await new Promise((resolve, reject) => {
+                const req = store.count();
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
+                setTimeout(() => reject(new Error("count timeout")), 1500);
               });
-            }
+              if (count > MAX_RECORDS_PER_STORE) {
+                console.log(`[Extract] Skip oversized store ${dbInfo.name}/${storeName}: ${count} records`);
+                dbData.stores[storeName] = { schema, records: [], _skipped: true, _count: count };
+                continue;
+              }
 
-            const serializedRecords = [];
-            for (let i = 0; i < records.length; i++) {
-              const key = keys ? await serialize(keys[i]) : undefined;
-              const value = await serialize(records[i]);
-              serializedRecords.push({ key, value });
-            }
+              const records = await new Promise((resolve, reject) => {
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+                setTimeout(() => reject(new Error("getAll timeout")), 4000);
+              });
 
-            dbData.stores[storeName] = {
-              schema,
-              records: serializedRecords
-            };
+              let keys = undefined;
+              if (!store.keyPath) {
+                keys = await new Promise((resolve, reject) => {
+                  const req = store.getAllKeys();
+                  req.onsuccess = () => resolve(req.result);
+                  req.onerror = () => reject(req.error);
+                  setTimeout(() => reject(new Error("getAllKeys timeout")), 1500);
+                });
+              }
+
+              const serializedRecords = [];
+              for (let i = 0; i < records.length; i++) {
+                if (idbBytesUsed > MAX_TOTAL_IDB_BYTES) {
+                  console.warn("[Extract] IDB total cap reached mid-store, truncating");
+                  break;
+                }
+                const key = keys ? await serialize(keys[i]) : undefined;
+                const value = await serialize(records[i]);
+                const rec = { key, value };
+                try { idbBytesUsed += JSON.stringify(rec).length; } catch (_) {}
+                serializedRecords.push(rec);
+              }
+
+              dbData.stores[storeName] = { schema, records: serializedRecords };
+            } catch (e) {
+              console.warn(`[Extract] Failed store ${dbInfo.name}/${storeName}:`, e.message || e);
+              continue;
+            }
           }
-          db.close();
+          try { db.close(); } catch (_) {}
           indexedDBData[dbInfo.name] = dbData;
         }
       } catch (e) {
@@ -455,71 +526,51 @@
       return false;
     }
   }
-  async function clearServiceWorkersAndCache() {
-    try {
-      // 1. Unregister Service Workers
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const registration of registrations) {
-          await registration.unregister();
-          console.log('Service Worker unregistered:', registration.scope);
-        }
-      }
-
-      // 2. Delete Cache Storage
-      if ('caches' in window) {
-        const keys = await caches.keys();
-        for (const key of keys) {
-          await caches.delete(key);
-          console.log('Cache deleted:', key);
-        }
-      }
-      return true;
-    } catch (error) {
-      console.error("Error clearing SW/Cache:", error);
-      return false;
-    }
-  }
-
   async function clearStorage() {
     try {
-      localStorage.clear();
-      sessionStorage.clear();
+      try { localStorage.clear(); } catch (e) { console.warn("localStorage.clear failed", e); }
+      try { sessionStorage.clear(); } catch (e) { console.warn("sessionStorage.clear failed", e); }
 
-      // Clear Service Workers and Cache (Inlined for script injection context)
+      // Unregister Service Workers + caches (best-effort, bounded)
       try {
-        // 1. Unregister Service Workers
         if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (const registration of registrations) {
-            await registration.unregister();
-            console.log('Service Worker unregistered:', registration.scope);
-          }
+          const regs = await Promise.race([
+            navigator.serviceWorker.getRegistrations(),
+            new Promise((res) => setTimeout(() => res([]), 1500))
+          ]);
+          await Promise.allSettled(regs.map((r) => r.unregister()));
         }
-
-        // 2. Delete Cache Storage
         if ('caches' in window) {
-          const keys = await caches.keys();
-          for (const key of keys) {
-            await caches.delete(key);
-            console.log('Cache deleted:', key);
-          }
+          const keys = await Promise.race([
+            caches.keys(),
+            new Promise((res) => setTimeout(() => res([]), 1500))
+          ]);
+          await Promise.allSettled(keys.map((k) => caches.delete(k)));
         }
       } catch (e) {
         console.warn("Error clearing SW/Cache:", e);
       }
 
+      // IndexedDB: best-effort, per-DB timeout. deleteDatabase blocks if any
+      // connection is still open on the page — we'd rather skip than hang.
       try {
-        const dbs = await indexedDB.databases();
+        const dbs = (typeof indexedDB.databases === "function") ? await indexedDB.databases() : [];
         for (const dbInfo of dbs) {
-          if (dbInfo.name) {
-            await new Promise((resolve) => {
+          if (!dbInfo.name) continue;
+          await new Promise((resolve) => {
+            let done = false;
+            const finish = () => { if (!done) { done = true; resolve(); } };
+            try {
               const req = indexedDB.deleteDatabase(dbInfo.name);
-              req.onsuccess = resolve;
-              req.onerror = resolve;
-              req.onblocked = resolve;
-            });
-          }
+              req.onsuccess = finish;
+              req.onerror = finish;
+              req.onblocked = finish;
+            } catch (_) {
+              finish();
+            }
+            // hard cap per DB
+            setTimeout(finish, 1500);
+          });
         }
       } catch (e) {
         console.warn("Failed to clear IndexedDB:", e);
@@ -527,18 +578,29 @@
       return true;
     } catch (error) {
       console.error("Error clearing storage:", error);
-      return false;
+      return true; // soft-success — caller still proceeds to reload
     }
   }
 
   // src/background/handlers/storage.handler.ts
+  // Helper: race executeScript so a frozen page can't hang the popup forever.
+  function withTimeoutBg(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms))
+    ]);
+  }
   var StorageHandler = class {
     async getStorageData(tabId) {
       try {
-        const results = await chrome.scripting.executeScript({
-          target: { tabId },
-          func: extractStorageData
-        });
+        const results = await withTimeoutBg(
+          chrome.scripting.executeScript({
+            target: { tabId },
+            func: extractStorageData
+          }),
+          15000,
+          "Extract storage"
+        );
         return results?.[0]?.result || { localStorage: {}, sessionStorage: {}, indexedDB: {} };
       } catch (error) {
         console.error("Error getting storage data:", error);
@@ -550,11 +612,15 @@
         throw new ExtensionError("Invalid tab ID for restoring storage data");
       }
       try {
-        const results = await chrome.scripting.executeScript({
-          target: { tabId },
-          func: injectStorageData,
-          args: [data.localStorage || {}, data.sessionStorage || {}, data.indexedDB || {}]
-        });
+        const results = await withTimeoutBg(
+          chrome.scripting.executeScript({
+            target: { tabId },
+            func: injectStorageData,
+            args: [data.localStorage || {}, data.sessionStorage || {}, data.indexedDB || {}]
+          }),
+          15000,
+          "Restore storage"
+        );
         if (!results || results.length === 0 || results[0].result !== true) {
           throw new ExtensionError("Failed to inject storage data into the page");
         }
@@ -564,10 +630,14 @@
     }
     async clearStorageData(tabId) {
       try {
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          func: clearStorage
-        });
+        await withTimeoutBg(
+          chrome.scripting.executeScript({
+            target: { tabId },
+            func: clearStorage
+          }),
+          10000,
+          "Clear storage"
+        );
       } catch (error) {
         throw new ExtensionError(`Failed to clear storage data: ${error}`);
       }
@@ -605,8 +675,7 @@
         throw new ExtensionError("Missing domain in session data");
       }
 
-      // Helper for timeout
-      const withTimeout = (promise, ms = 5000, name = "Operation") => {
+      const withTimeout = (promise, ms, name) => {
         return Promise.race([
           promise,
           new Promise((_, reject) => setTimeout(() => reject(new Error(`${name} timed out after ${ms}ms`)), ms))
@@ -614,32 +683,37 @@
       };
 
       try {
-        // Clear existing data first (usually fast, but good to be safe)
-        await this.cookieHandler.clearCookiesForDomain(domain, tabId);
-        await this.storageHandler.clearStorageData(tabId);
+        // Clear cookies and storage in parallel — independent, both bounded.
+        // Each gets its own timeout so a stuck IDB clear can't block cookie clear.
+        await Promise.allSettled([
+          withTimeout(this.cookieHandler.clearCookiesForDomain(domain, tabId), 10000, "Clear cookies"),
+          withTimeout(this.storageHandler.clearStorageData(tabId), 10000, "Clear storage")
+        ]);
 
-        // Restore data with timeout
-        // We treat timeout as a "soft error" - we proceed to reload anyway because partial data might be enough
-        // and we don't want the UI to hang.
+        // Restore. Cookie restore and storage restore are independent — run in parallel
+        // with a generous total budget. Soft-fail (log) so the reload still happens
+        // even if one path is slow on heavy sites like Instagram.
         try {
-          await withTimeout(Promise.all([
-            this.cookieHandler.restoreCookies(cookies, domain),
-            this.storageHandler.restoreStorageData(tabId, {
-              localStorage: localStorage2,
-              sessionStorage: sessionStorage2,
-              indexedDB: indexedDB2
-            })
-          ]), 2000, "Session Restore"); // 2 seconds timeout
+          await withTimeout(
+            Promise.allSettled([
+              this.cookieHandler.restoreCookies(cookies, domain),
+              this.storageHandler.restoreStorageData(tabId, {
+                localStorage: localStorage2,
+                sessionStorage: sessionStorage2,
+                indexedDB: indexedDB2
+              })
+            ]),
+            15000,
+            "Session restore"
+          );
         } catch (error) {
-          console.warn("Session restore timed out or failed, proceeding to reload anyway:", error);
+          console.warn("[Switch] Session restore exceeded budget, proceeding to reload:", error);
         }
 
       } catch (error) {
-        // If clearing failed, we still try to reload, but log the error
         console.error("Error during session switch preparation:", error);
-        throw new ExtensionError(`Failed to switch session: ${error instanceof Error ? error.message : String(error)}`);
+        // Don't throw — we still want to reload so the user sees something.
       } finally {
-        // ALWAYS reload the tab, no matter what happens
         try {
           await chrome.tabs.reload(tabId);
         } catch (reloadError) {
@@ -789,6 +863,17 @@
           sendResponse({ success: false, error: "Missing required parameters" });
           return;
         }
+        // Verify tab is in a complete state — refreshing mid-redirect captures partial data
+        try {
+          const tab = await chrome.tabs.get(tabId);
+          if (tab.status !== "complete") {
+            sendResponse({ success: false, error: "Tab not ready (status: " + tab.status + ")" });
+            return;
+          }
+        } catch (e) {
+          sendResponse({ success: false, error: "Could not verify tab state" });
+          return;
+        }
         // Get current session data from the page
         const sessionData = await this.sessionHandler.getCurrentSession(domain, tabId);
         // Get stored sessions and find the one to update
@@ -796,6 +881,28 @@
         const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
         if (sessionIndex === -1) {
           sendResponse({ success: false, error: "Session not found" });
+          return;
+        }
+        // Fix B1: Sanity guard — refuse to overwrite a session if the captured state
+        // looks like the user has been logged out. Three signals:
+        //   1. captured cookies are empty but stored session had cookies
+        //   2. cookie count dropped >70% vs stored
+        //   3. captured localStorage empty vs stored had data
+        // If any signal fires, abort the refresh and let the user manually re-save.
+        const stored = sessions[sessionIndex];
+        const storedCookieCount = (stored.cookies || []).length;
+        const freshCookieCount = (sessionData.cookies || []).length;
+        const storedLsKeys = Object.keys(stored.localStorage || {}).length;
+        const freshLsKeys = Object.keys(sessionData.localStorage || {}).length;
+        const looksLoggedOut =
+          (storedCookieCount > 0 && freshCookieCount === 0) ||
+          (storedCookieCount > 5 && freshCookieCount < storedCookieCount * 0.3) ||
+          (storedLsKeys > 0 && freshLsKeys === 0 && freshCookieCount === 0);
+        if (looksLoggedOut) {
+          console.warn(
+            `[Auto Refresh] Aborted for "${stored.name}" — stored=${storedCookieCount}c/${storedLsKeys}ls, fresh=${freshCookieCount}c/${freshLsKeys}ls. Likely logged out.`
+          );
+          sendResponse({ success: false, error: "Auto-refresh aborted: looks like the session is logged out. Saved data preserved." });
           return;
         }
         // Update the session with fresh data
@@ -850,6 +957,66 @@
       return 0;
     }
   }
+
+  // ============================================================
+  // Action badge: show jumlah saved session for current tab's domain
+  // ============================================================
+  function extractDomainBg(url) {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^www\./, "");
+      if ((host === "localhost" || host.startsWith("127.")) && u.port) {
+        return `${host}:${u.port}`;
+      }
+      return host;
+    } catch (_) {
+      return "";
+    }
+  }
+  async function updateBadgeForTab(tab) {
+    if (!tab || !tab.id || !tab.url) {
+      try { await chrome.action.setBadgeText({ text: "" }); } catch (_) {}
+      return;
+    }
+    if (!/^https?:/i.test(tab.url)) {
+      try { await chrome.action.setBadgeText({ tabId: tab.id, text: "" }); } catch (_) {}
+      return;
+    }
+    try {
+      const domain = extractDomainBg(tab.url);
+      const result = await chrome.storage.local.get(STORAGE_KEYS.SESSIONS);
+      const sessions = result[STORAGE_KEYS.SESSIONS] || [];
+      const count = sessions.filter((s) => s.domain === domain).length;
+      const text = count > 0 ? (count > 99 ? "99+" : String(count)) : "";
+      await chrome.action.setBadgeText({ tabId: tab.id, text });
+      await chrome.action.setBadgeBackgroundColor({ tabId: tab.id, color: "#d97706" });
+      if (chrome.action.setBadgeTextColor) {
+        try { await chrome.action.setBadgeTextColor({ tabId: tab.id, color: "#fef3c7" }); } catch (_) {}
+      }
+    } catch (e) {
+      console.warn("[Badge] Update failed:", e);
+    }
+  }
+  chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+    try { const tab = await chrome.tabs.get(tabId); updateBadgeForTab(tab); } catch (_) {}
+  });
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === "complete" || changeInfo.url) updateBadgeForTab(tab);
+  });
+  chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (area !== "local" || !changes[STORAGE_KEYS.SESSIONS]) return;
+    try {
+      const tabs = await chrome.tabs.query({ active: true });
+      for (const t of tabs) updateBadgeForTab(t);
+    } catch (_) {}
+  });
+  // Initial badge paint on service worker startup
+  (async () => {
+    try {
+      const tabs = await chrome.tabs.query({ active: true });
+      for (const t of tabs) updateBadgeForTab(t);
+    } catch (_) {}
+  })();
 
   // src/background/index.ts
   var messageService = new MessageService();

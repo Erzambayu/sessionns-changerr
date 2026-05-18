@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Session Switcher 2",
-  "version": "1.7.0",
-  "description": "A Chrome extension for switching between sessions (fork)",
+  "version": "1.8.1",
+  "description": "Manage multiple accounts on the same site. Local-first, keyboard-first, no telemetry.",
   "permissions": [
     "storage",
     "tabs",
@@ -27,6 +27,15 @@
       "128": "assets/icons/icon-128.png"
     }
   },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Open Session Switcher popup"
+    }
+  },
   "icons": {
     "16": "assets/icons/icon-16.png",
     "32": "assets/icons/icon-32.png",
@@ -38,16 +47,5 @@
       "id": "session-switcher-2@kuronekony4n",
       "strict_min_version": "109.0"
     }
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [],
-      "matches": [
-        "<all_urls>"
-      ],
-      "extension_ids": [
-        "*"
-      ]
-    }
-  ]
+  }
 }
