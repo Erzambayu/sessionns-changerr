@@ -1362,7 +1362,16 @@
 
       // Firefox MV3: <all_urls> is opt-in. Surface a banner so users can grant it.
       try {
-        const isFirefox = typeof navigator !== "undefined" && /firefox|gecko/i.test(navigator.userAgent);
+        // Firefox detection: Chrome's UA contains "like Gecko" so we cannot use /gecko/i.
+        // Reliable signals (any one is sufficient):
+        //  1. UA contains the literal token "Firefox/" (Chrome never includes this)
+        //  2. browser.runtime.getBrowserInfo exists (Firefox-only API, undefined in Chromium)
+        //  3. Vendor string is empty AND productSub === "20100101" (Gecko marker)
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+        const uaIsFirefox = /\bFirefox\/\d/.test(ua) || /\bSeaMonkey\//.test(ua);
+        const hasFFRuntime = typeof browser !== "undefined" &&
+          browser.runtime && typeof browser.runtime.getBrowserInfo === "function";
+        const isFirefox = uaIsFirefox || hasFFRuntime;
         if (isFirefox && chrome.permissions && typeof chrome.permissions.contains === "function") {
           const granted = await new Promise((resolve) => {
             try {
