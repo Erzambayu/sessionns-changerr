@@ -1,0 +1,45 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Validate manifest.json
+        run: |
+          node -e "
+            const m = require('./manifest.json');
+            if (!m.manifest_version) throw new Error('missing manifest_version');
+            if (!m.version) throw new Error('missing version');
+            if (!m.browser_specific_settings?.gecko?.id) throw new Error('missing gecko.id');
+            if (!m.browser_specific_settings?.gecko?.data_collection_permissions?.required) {
+              throw new Error('missing data_collection_permissions.required');
+            }
+            console.log('manifest OK');
+          "
+
+      - name: JS syntax check
+        run: |
+          node -e "new Function(require('fs').readFileSync('background/index.js','utf8'));"
+          node -e "new Function(require('fs').readFileSync('popup/index.js','utf8'));"

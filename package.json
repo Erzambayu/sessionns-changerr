@@ -1,0 +1,22 @@
+{
+  "name": "session-switcher2",
+  "version": "1.10.0",
+  "description": "Manage multiple accounts on the same site. Local-first, keyboard-first, no telemetry.",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "lint": "eslint background popup --ext .js",
+    "lint:fix": "eslint background popup --ext .js --fix",
+    "validate": "node -e \"const m=require('./manifest.json'); if(!m.browser_specific_settings?.gecko?.data_collection_permissions?.required) throw new Error('missing data_collection_permissions'); console.log('manifest OK', m.version)\"",
+    "syntax": "node -e \"new Function(require('fs').readFileSync('background/index.js','utf8'));new Function(require('fs').readFileSync('popup/index.js','utf8'));console.log('JS syntax OK')\"",
+    "check": "npm run validate && npm run syntax && npm run lint"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Erzambayu/sessionns-changerr.git"
+  },
+  "license": "MIT"
+}

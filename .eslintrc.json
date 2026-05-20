@@ -1,0 +1,34 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "webextensions": true,
+    "worker": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "globals": {
+    "chrome": "readonly",
+    "browser": "readonly",
+    "JSZip": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": ["warn", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_",
+      "caughtErrorsIgnorePattern": "^_"
+    }],
+    "no-undef": "error",
+    "no-console": "off",
+    "no-empty": ["error", { "allowEmptyCatch": true }],
+    "no-constant-condition": ["error", { "checkLoops": false }],
+    "no-prototype-builtins": "off",
+    "no-control-regex": "off",
+    "no-useless-escape": "warn",
+    "no-redeclare": "warn",
+    "no-inner-declarations": "off"
+  }
+}

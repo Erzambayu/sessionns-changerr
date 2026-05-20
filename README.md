@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.9.0-f59e0b?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.10.0-f59e0b?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![Firefox](https://img.shields.io/badge/Firefox-109%2B-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-84cc16?style=for-the-badge)
@@ -43,15 +43,17 @@ Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, sepert
 ## ✨ Features
 
 - 🔐 **Session Management** — Simpan dan switch antar session dengan sekali klik
+- 📝 **Session Notes** — Tambahin context per session ("trial account expires 2026-06-01"), max 280 char
 - 💾 **Multi-Account Support** — Kelola banyak akun pada website yang sama
 - 🍪 **Complete Data Backup** — Cookies, localStorage, sessionStorage, IndexedDB
 - ⚡ **Quick Switcher** — `Ctrl+K` / `Cmd+K` fuzzy search lintas semua site
 - 🔢 **Badge Counter** — Jumlah session per domain langsung di icon toolbar
 - ⌨️ **Keyboard Shortcuts** — `/` focus search, `1-9` switch ke session ke-N, `Esc` close modal
 - 🔒 **Local & Secure** — Semua data tersimpan lokal, no telemetry
-- 📤 **Export / Import** — Backup JSON atau ZIP, restore lintas device
+- 📤 **Export / Import** — Backup JSON atau ZIP, restore dengan **merge** atau **replace** mode
 - 🎨 **Editorial Dark UI** — Warm-dark, serif display, monospace UI, sharp amber accent
 - 🔐 **PIN Protection (PBKDF2)** — Hash 200K iterations + per-install salt, gate semua destructive action
+- ⏱️ **Auto-lock Timeout** — Configurable PIN re-prompt window (every action / 1m / 5m / 15m / 1h)
 - 🔄 **Smart Auto Refresh** — Keep session valid + sanity check, gak overwrite kalo logout
 - ♿ **Accessible** — `role=dialog`, focus trap, `aria-live` announcements, reduced-motion safe
 - 🚀 **Fast & Lightweight** — No framework, vanilla JS, MV3
@@ -219,6 +221,23 @@ Untuk logout dan login dengan akun berbeda:
 
 ---
 
+## 🧰 Development
+
+```bash
+# install lint deps
+npm install
+
+# validate manifest + syntax + lint
+npm run check
+
+# auto-fix lint issues
+npm run lint:fix
+```
+
+CI runs on every push/PR via [`.github/workflows/lint.yml`](.github/workflows/lint.yml). Tagging `session-switcher2-vX.Y.Z` triggers [`release.yml`](.github/workflows/release.yml) which builds Chrome ZIP + Firefox ZIP + `.xpi` + AMO source bundle and attaches them to the GitHub Release automatically.
+
+---
+
 ## ⌨️ Keyboard Shortcuts
 
 | Shortcut | Action |
@@ -267,8 +286,24 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 📝 Changelog
 
-### v1.9.0 (Current) — Firefox Support
-- 🦊 **Dual-compat Chrome + Firefox** — manifest sekarang punya `service_worker` (Chrome) + `scripts` array (Firefox event page) → load native di kedua browser tanpa fork codebase
+### v1.10.0 (Current) — Productivity & Polish
+- 📝 **Session notes** — optional 280-char free text per session (e.g. "trial account, expires 2026-06-01"). Editable via Save / Edit modals, displayed inline under each session.
+- 🔄 **Import modes** — choose **Merge** (add to existing, skip duplicates by domain+name) or **Replace** (wipe everything, restore only from backup, with native confirm). Default is Merge so a misclick can't wipe data.
+- ⏱️ **Auto-lock timeout** — after a successful PIN verify, gated actions inside the same popup window skip the prompt for the configured timeout (Every action / 1 min / 5 min / 15 min / 1 hour). In-memory only, resets when popup re-opens.
+- 🤖 **CI/CD** — GitHub Actions auto-builds Chrome ZIP + Firefox ZIP + `.xpi` + AMO source bundle on every tag push, attaches to release. No more manual zip dance.
+- 🧹 **Code quality** — ESLint + EditorConfig + `package.json` scripts (`npm run check` validates manifest, JS syntax, and lints in one shot).
+
+### v1.9.3
+- 🐛 Fix Firefox UA detection that incorrectly matched Chrome (chrome's UA contains "like Gecko"). Now uses `Firefox/<digit>` token + `browser.runtime.getBrowserInfo` API check.
+
+### v1.9.2
+- 🆔 Unique extension ID for the fork: `session-switcher-2@erzambayu`.
+
+### v1.9.1
+- 🦊 Add `data_collection_permissions: { required: ["none"] }` for AMO compliance (effective Nov 3 2025).
+
+### v1.9.0 — Firefox Support
+- 🦊 **Dual-compat Chrome + Firefox** — manifest now has `service_worker` (Chrome) + `scripts` array (Firefox event page) → load native di kedua browser tanpa fork codebase
 - 🔓 **Firefox permission banner** — runtime UA detect → kalo `<all_urls>` belum granted, popup tampilin banner kuning dengan CTA "Grant access" → klik → `chrome.permissions.request()` flow native FF prompt
 - 📦 **Release artifacts** — `.zip` (Chrome/FF unpacked) + `.xpi` (FF dev edition) di-bundle di GitHub Releases
 - 📚 **README** — install steps Firefox + browser support matrix + troubleshooting FF

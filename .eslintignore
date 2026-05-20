@@ -1,0 +1,6 @@
+libs/
+node_modules/
+build/
+*.zip
+*.xpi
+.git/

@@ -120,8 +120,10 @@
       this.inputs = {
         sessionName: getElementByIdSafe("sessionName"),
         sessionOrder: getElementByIdSafe("sessionOrder"),
+        sessionNote: getElementByIdSafe("sessionNote"),
         newSessionName: getElementByIdSafe("newSessionName"),
         newSessionOrder: getElementByIdSafe("newSessionOrder"),
+        newSessionNote: getElementByIdSafe("newSessionNote"),
         importFileInput: getElementByIdSafe("importFileInput"),
         pinSetupInput: getElementByIdSafe("pinSetupInput"),
         pinConfirmInput: getElementByIdSafe("pinConfirmInput"),
@@ -228,15 +230,17 @@
     showSaveModal(defaultName = "Unnamed Session", order) {
       if (this.inputs.sessionName) this.inputs.sessionName.value = defaultName;
       if (this.inputs.sessionOrder) this.inputs.sessionOrder.value = order.toString();
+      if (this.inputs.sessionNote) this.inputs.sessionNote.value = "";
       this.show("save");
       if (this.inputs.sessionName) {
         this.inputs.sessionName.focus();
         this.inputs.sessionName.select();
       }
     }
-    showRenameModal(currentName, currentOrder) {
+    showRenameModal(currentName, currentOrder, currentNote) {
       if (this.inputs.newSessionName) this.inputs.newSessionName.value = currentName;
       if (this.inputs.newSessionOrder) this.inputs.newSessionOrder.value = currentOrder.toString();
+      if (this.inputs.newSessionNote) this.inputs.newSessionNote.value = currentNote || "";
       this.show("rename");
       if (this.inputs.newSessionName) {
         this.inputs.newSessionName.focus();
@@ -270,13 +274,15 @@
     getSaveModalInput() {
       return {
         name: this.inputs.sessionName ? this.inputs.sessionName.value.trim() : "",
-        order: this.inputs.sessionOrder ? this.inputs.sessionOrder.value : "0"
+        order: this.inputs.sessionOrder ? this.inputs.sessionOrder.value : "0",
+        note: this.inputs.sessionNote ? this.inputs.sessionNote.value.trim().slice(0, 280) : ""
       };
     }
     getRenameModalInput() {
       return {
         name: this.inputs.newSessionName ? this.inputs.newSessionName.value.trim() : "",
-        order: this.inputs.newSessionOrder ? this.inputs.newSessionOrder.value : "0"
+        order: this.inputs.newSessionOrder ? this.inputs.newSessionOrder.value : "0",
+        note: this.inputs.newSessionNote ? this.inputs.newSessionNote.value.trim().slice(0, 280) : ""
       };
     }
     hideSaveModal() {
@@ -412,8 +418,10 @@
       this.hideVisible();
       if (this.inputs.sessionName) this.inputs.sessionName.value = "";
       if (this.inputs.sessionOrder) this.inputs.sessionOrder.value = "";
+      if (this.inputs.sessionNote) this.inputs.sessionNote.value = "";
       if (this.inputs.newSessionName) this.inputs.newSessionName.value = "";
       if (this.inputs.newSessionOrder) this.inputs.newSessionOrder.value = "";
+      if (this.inputs.newSessionNote) this.inputs.newSessionNote.value = "";
       if (this.inputs.importFileInput) this.inputs.importFileInput.value = "";
     }
     isVisible(modalKey) {
@@ -603,6 +611,16 @@
         meta.textContent = `${UI_TEXT.LAST_USED} ${formatDate(session.lastUsed)}`;
         info.appendChild(meta);
 
+        // Optional inline note. Rendered via textContent so user-supplied content
+        // can never inject HTML even if the storage was tampered with.
+        if (session.note && typeof session.note === "string" && session.note.trim()) {
+          const noteEl = document.createElement("div");
+          noteEl.className = "session-note";
+          noteEl.textContent = session.note.trim();
+          noteEl.title = session.note.trim();
+          info.appendChild(noteEl);
+        }
+
         // actions
         const actions = document.createElement("div");
         actions.className = "session-actions";
@@ -688,8 +706,16 @@
     PIN_HASH: "pinHash",
     PIN_SALT: "pinSalt",
     PIN_ENABLED: "pinEnabled",
-    PIN_VERSION: "pinVersion"
+    PIN_VERSION: "pinVersion",
+    LOCK_TIMEOUT: "lockTimeoutSec"
   };
+
+  // Default re-prompt interval after a successful PIN verify (5 min).
+  // 0 = always prompt. Stored as integer seconds.
+  var DEFAULT_LOCK_TIMEOUT_SEC = 300;
+
+  // In-memory only — never persisted. Reset whenever popup re-opens.
+  var pinUnlockedUntil = 0;
 
   // src/shared/utils/idGenerator.ts
   function generateId() {
@@ -774,7 +800,7 @@
         throw new ExtensionError(handleError(error, "PopupService.initialize"));
       }
     }
-    async saveCurrentSession(name, order) {
+    async saveCurrentSession(name, order, note) {
       try {
         const validatedName = validateSessionName(name);
         const response = await this.chromeApi.sendMessage({
@@ -801,11 +827,13 @@
             s.order++;
           }
         });
+        const trimmedNote = typeof note === "string" ? note.trim().slice(0, 280) : "";
         const newSession = {
           ...storedSession,
           id: generateId(),
           name: validatedName,
           order,
+          note: trimmedNote || undefined,
           domain: this.state.currentDomain,
           createdAt: Date.now(),
           lastUsed: Date.now()
@@ -874,7 +902,7 @@
         throw new ExtensionError(handleError(error, "PopupService.createNewSession"));
       }
     }
-    async renameSession(sessionId, newName, newOrder) {
+    async renameSession(sessionId, newName, newOrder, newNote) {
       try {
         const session = this.state.sessions.find((s) => s.id === sessionId);
         if (!session) {
@@ -902,6 +930,16 @@
             session.order = nOrder;
           }
         }
+
+        // Note is intentionally only touched when the caller passed it in (string or empty
+        // string). Passing undefined preserves existing data — this matters because some
+        // callers (legacy) don't know about notes yet.
+        if (typeof newNote === "string") {
+          const trimmed = newNote.trim().slice(0, 280);
+          if (trimmed) session.note = trimmed;
+          else delete session.note;
+        }
+
         await this.saveStorageData();
       } catch (error) {
         throw new ExtensionError(handleError(error, "PopupService.renameSession"));
@@ -1181,6 +1219,26 @@
         throw error;
       }
     }
+    async getLockTimeoutSec() {
+      try {
+        const result = await this.chromeApi.getStorageData([STORAGE_KEYS.LOCK_TIMEOUT]);
+        const v = result[STORAGE_KEYS.LOCK_TIMEOUT];
+        // Numeric coercion guards against legacy stringified values; >= 0 ensures we never
+        // produce a negative window (which would mean "always unlocked").
+        const n = typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : DEFAULT_LOCK_TIMEOUT_SEC;
+        return n;
+      } catch (_) {
+        return DEFAULT_LOCK_TIMEOUT_SEC;
+      }
+    }
+    async setLockTimeoutSec(sec) {
+      const n = typeof sec === "number" && Number.isFinite(sec) && sec >= 0 ? Math.floor(sec) : DEFAULT_LOCK_TIMEOUT_SEC;
+      await this.chromeApi.setStorageData({ [STORAGE_KEYS.LOCK_TIMEOUT]: n });
+      // Re-arming on change keeps user expectation: shrinking the window should not retroactively unlock.
+      if (pinUnlockedUntil > 0) {
+        pinUnlockedUntil = Math.min(pinUnlockedUntil, Date.now() + n * 1000);
+      }
+    }
     async clearSessions(clearOption) {
       try {
         if (clearOption === "current") {
@@ -1257,11 +1315,37 @@
             throw new Error("Invalid import data format");
           }
 
-          const importedSessions = importData.sessions.map((s) => ({
-            ...s,
-            id: generateId() // Regenerate IDs to avoid conflicts
-          }));
-          this.state.sessions.push(...importedSessions);
+          // Read selected import mode (merge | replace). Default to merge for safety:
+          // a missing/unknown value should never silently wipe user data.
+          const modeEl = document.querySelector('input[name="importMode"]:checked');
+          const mode = modeEl && modeEl.value === "replace" ? "replace" : "merge";
+
+          if (mode === "replace") {
+            // Wipe in-memory state first; persistence happens at saveStorageData() below.
+            this.state.sessions = [];
+            this.state.activeSessions = {};
+            const importedSessions = importData.sessions.map((s) => ({
+              ...s,
+              id: generateId() // Regenerate IDs to avoid carrying over stale references
+            }));
+            this.state.sessions = importedSessions;
+          } else {
+            // Merge: skip entries that look like duplicates (same domain + name) so
+            // re-importing the same backup is a no-op rather than spawning copies.
+            const existingKeys = new Set(
+              this.state.sessions.map((s) => `${s.domain || ""}::${(s.name || "").trim().toLowerCase()}`)
+            );
+            const importedSessions = importData.sessions
+              .filter((s) => {
+                const key = `${s.domain || ""}::${(s.name || "").trim().toLowerCase()}`;
+                return !existingKeys.has(key);
+              })
+              .map((s) => ({
+                ...s,
+                id: generateId()
+              }));
+            this.state.sessions.push(...importedSessions);
+          }
           await this.saveStorageData();
           resolve();
         } catch (error) {
@@ -1499,9 +1583,19 @@
           const toggle = document.getElementById("pinEnabledToggle");
           const pinActions = document.getElementById("pinActions");
           const noPinMessage = document.getElementById("noPinMessage");
+          const lockRow = document.getElementById("lockTimeoutRow");
+          const lockSelect = document.getElementById("lockTimeoutSelect");
           if (toggle) toggle.checked = pinEnabled;
           if (pinActions) pinActions.style.display = pinSetup ? "flex" : "none";
           if (noPinMessage) noPinMessage.style.display = pinSetup ? "none" : "block";
+          // Lock-timeout dropdown only makes sense when PIN is actually enabled.
+          if (lockRow) lockRow.style.display = pinEnabled ? "flex" : "none";
+          if (lockSelect) {
+            try {
+              const cur = await popupService.getLockTimeoutSec();
+              lockSelect.value = String(cur);
+            } catch (_) {}
+          }
           modalManager.showSecuritySettingsModal();
         }
       },
@@ -1513,7 +1607,7 @@
           if (!input.name) return;
           await loadingManager.withLoading(async () => {
             try {
-              await popupService.saveCurrentSession(input.name, input.order);
+              await popupService.saveCurrentSession(input.name, input.order, input.note);
               modalManager.hideSaveModal();
               renderSessionList();
             } catch (error) {
@@ -1529,7 +1623,7 @@
           if (!input.name || !state.currentRenameSessionId) return;
           await loadingManager.withLoading(async () => {
             try {
-              await popupService.renameSession(state.currentRenameSessionId, input.name, input.order);
+              await popupService.renameSession(state.currentRenameSessionId, input.name, input.order, input.note);
               modalManager.hideRenameModal();
               renderSessionList();
             } catch (error) {
@@ -1654,13 +1748,22 @@
         id: "importBtn", handler: async () => {
           const file = modalManager.getImportFile();
           if (!file) return;
+          // Replace mode is destructive — surface a native confirm so a misclick
+          // can't silently wipe everything. Merge mode proceeds without prompt.
+          const modeEl = document.querySelector('input[name="importMode"]:checked');
+          const mode = modeEl && modeEl.value === "replace" ? "replace" : "merge";
+          if (mode === "replace") {
+            const ok = window.confirm(
+              "Replace mode will DELETE all existing sessions and restore only what's in the backup. This cannot be undone. Continue?"
+            );
+            if (!ok) return;
+          }
           await loadingManager.withLoading(async () => {
             try {
               await popupService.importSessions(file);
               modalManager.hideExportImportModal();
               renderSessionList();
-              // Show success notification
-              showToast("✅ Import berhasil! Data telah di-restore.");
+              showToast(mode === "replace" ? "✅ Sessions replaced from backup." : "✅ Import complete.");
             } catch (error) {
               modalManager.showErrorModal(handleError(error, "Import Sessions"));
             }
@@ -1682,6 +1785,23 @@
           modalManager.showPinSetupModal();
         } else {
           await popupService.togglePinEnabled(isEnabled);
+          // Toggle the lock-timeout row alongside the PIN toggle.
+          const lockRow = document.getElementById("lockTimeoutRow");
+          if (lockRow) lockRow.style.display = isEnabled ? "flex" : "none";
+          // Disabling PIN clears the unlock window so re-enabling immediately re-prompts.
+          if (!isEnabled) pinUnlockedUntil = 0;
+        }
+      });
+    }
+
+    const lockTimeoutSelect = document.getElementById("lockTimeoutSelect");
+    if (lockTimeoutSelect) {
+      lockTimeoutSelect.addEventListener("change", async (e) => {
+        const sec = parseInt(e.target.value, 10);
+        try {
+          await popupService.setLockTimeoutSec(Number.isFinite(sec) ? sec : DEFAULT_LOCK_TIMEOUT_SEC);
+        } catch (err) {
+          console.warn("[lock-timeout] save failed:", err);
         }
       });
     }
@@ -1723,6 +1843,11 @@
     async function requirePin(reasonText) {
       const enabled = await popupService.isPinEnabled();
       if (!enabled) return true;
+      // Honor unlock window: skip prompt if user verified within the configured timeout.
+      // Note: pinUnlockedUntil is in-memory only — closing/re-opening the popup re-locks.
+      if (pinUnlockedUntil && Date.now() < pinUnlockedUntil) {
+        return true;
+      }
       // If a previous unrelated request is still pending, cancel it (resolve false).
       if (pendingPinResolver) {
         try { pendingPinResolver(false); } catch (_) {}
@@ -1750,6 +1875,12 @@
           modalManager.showPinVerifyError("Incorrect PIN");
           return;
         }
+        // Arm the unlock window so subsequent gated actions in the same popup session
+        // don't keep prompting until the configured timeout elapses.
+        try {
+          const sec = await popupService.getLockTimeoutSec();
+          pinUnlockedUntil = sec > 0 ? Date.now() + sec * 1000 : 0;
+        } catch (_) { pinUnlockedUntil = 0; }
         modalManager.hidePinVerifyModal();
         // Path A: generic gate via requirePin()
         if (pendingPinResolver) {
@@ -1797,12 +1928,15 @@
       removePinBtn.addEventListener("click", async () => {
         try {
           await popupService.removePin();
+          pinUnlockedUntil = 0;
           const toggle = document.getElementById("pinEnabledToggle");
           const pinActions = document.getElementById("pinActions");
           const noPinMessage = document.getElementById("noPinMessage");
+          const lockRow = document.getElementById("lockTimeoutRow");
           if (toggle) toggle.checked = false;
           if (pinActions) pinActions.style.display = "none";
           if (noPinMessage) noPinMessage.style.display = "block";
+          if (lockRow) lockRow.style.display = "none";
           showToast("🔓 PIN removed", "error");
         } catch (error) {
           modalManager.showErrorModal("Failed to remove PIN");
@@ -1835,7 +1969,7 @@
         const session = popupService.getSession(sessionId);
         if (session) {
           popupService.setState({ currentRenameSessionId: sessionId });
-          modalManager.showRenameModal(session.name, session.order);
+          modalManager.showRenameModal(session.name, session.order, session.note);
         }
       },
       onDeleteClick: async (sessionId) => {
