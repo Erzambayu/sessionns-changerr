@@ -1359,6 +1359,36 @@
         const v = document.getElementById("aboutVersion");
         if (v && m && m.version) v.textContent = `v${m.version}`;
       } catch (_) {}
+
+      // Firefox MV3: <all_urls> is opt-in. Surface a banner so users can grant it.
+      try {
+        const isFirefox = typeof navigator !== "undefined" && /firefox|gecko/i.test(navigator.userAgent);
+        if (isFirefox && chrome.permissions && typeof chrome.permissions.contains === "function") {
+          const granted = await new Promise((resolve) => {
+            try {
+              chrome.permissions.contains({ origins: ["<all_urls>"] }, (ok) => resolve(!!ok));
+            } catch (_) { resolve(true); }
+          });
+          if (!granted) {
+            const main = document.querySelector(".app-content") || document.body;
+            const banner = document.createElement("div");
+            banner.className = "ff-permission-banner";
+            banner.setAttribute("role", "alert");
+            banner.style.cssText = "margin:8px 12px;padding:10px 12px;border:1px solid #d97706;background:#fef3c7;color:#7c2d12;border-radius:6px;font-size:12px;display:flex;flex-direction:column;gap:8px;";
+            banner.innerHTML = '<div><strong>Firefox:</strong> grant site access so sessions can be read/restored on every domain.</div><button id="grantAllUrlsBtn" class="btn btn-primary btn-sm" style="align-self:flex-start;">Grant access</button>';
+            main.parentNode.insertBefore(banner, main);
+            const btn = banner.querySelector("#grantAllUrlsBtn");
+            btn?.addEventListener("click", () => {
+              try {
+                chrome.permissions.request({ origins: ["<all_urls>"] }, (ok) => {
+                  if (ok) banner.remove();
+                });
+              } catch (e) { console.warn("permission request failed:", e); }
+            });
+          }
+        }
+      } catch (e) { console.warn("[FF perm check] skipped:", e); }
+
       renderSessionList();
 
       // Auto refresh active session in background (non-blocking)
