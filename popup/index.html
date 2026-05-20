@@ -114,16 +114,20 @@
         <h3 id="saveModalTitle">Save session</h3>
         <button id="closeSaveModal" class="close-btn" aria-label="Close">×</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="sessionName">Session name</label>
-          <input type="text" id="sessionName" placeholder="Personal, Work, Testing..." value="Unnamed Session" />
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="sessionName">Session name</label>
+            <input type="text" id="sessionName" placeholder="Personal, Work, Testing..." value="Unnamed Session" />
+          </div>
+          <div class="form-group">
+            <label for="sessionOrder">Order priority</label>
+            <input type="number" id="sessionOrder" placeholder="1" min="1" />
+          </div>
+          <div class="form-group">
+            <label for="sessionNote">Note <span class="form-hint">(optional)</span></label>
+            <textarea id="sessionNote" rows="2" maxlength="280" placeholder="Trial account, expires 2026-06-01..."></textarea>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="sessionOrder">Order priority</label>
-          <input type="number" id="sessionOrder" placeholder="1" min="1" />
-        </div>
-      </div>
       <div class="modal-footer">
         <button id="cancelSave" class="btn btn-secondary">Cancel</button>
         <button id="confirmSave" class="btn btn-primary">Save</button>
@@ -138,16 +142,20 @@
         <h3 id="renameModalTitle">Edit session</h3>
         <button id="closeRenameModal" class="close-btn" aria-label="Close">×</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="newSessionName">Session name</label>
-          <input type="text" id="newSessionName" placeholder="Enter new name" />
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newSessionName">Session name</label>
+            <input type="text" id="newSessionName" placeholder="Enter new name" />
+          </div>
+          <div class="form-group">
+            <label for="newSessionOrder">Order priority</label>
+            <input type="number" id="newSessionOrder" placeholder="Enter new order" min="1" />
+          </div>
+          <div class="form-group">
+            <label for="newSessionNote">Note <span class="form-hint">(optional)</span></label>
+            <textarea id="newSessionNote" rows="2" maxlength="280" placeholder="Trial account, expires 2026-06-01..."></textarea>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="newSessionOrder">Order priority</label>
-          <input type="number" id="newSessionOrder" placeholder="Enter new order" min="1" />
-        </div>
-      </div>
       <div class="modal-footer">
         <button id="replaceSessionBtn" class="btn btn-warning">Replace with current data</button>
         <button id="cancelRename" class="btn btn-secondary">Cancel</button>
@@ -328,6 +336,22 @@
                 <span>Click to select backup (.json or .zip)</span>
               </div>
             </div>
+            <div class="radio-group" role="radiogroup" aria-label="Import mode" style="margin-top: 10px;">
+              <label class="radio-option">
+                <input type="radio" name="importMode" value="merge" checked>
+                <div class="radio-content">
+                  <span class="radio-title">Merge</span>
+                  <span class="radio-desc">Add to existing sessions, skip duplicates</span>
+                </div>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="importMode" value="replace">
+                <div class="radio-content">
+                  <span class="radio-title">Replace</span>
+                  <span class="radio-desc">Wipe everything, restore only from backup</span>
+                </div>
+              </label>
+            </div>
             <button id="importBtn" class="btn btn-primary full-width" disabled>Restore data</button>
           </div>
         </div>
@@ -431,6 +455,19 @@
         <div id="pinActions" class="pin-actions" style="display: none;">
           <button id="changePinBtn" class="btn btn-secondary btn-sm">Change PIN</button>
           <button id="removePinBtn" class="btn btn-danger btn-sm">Remove PIN</button>
+        </div>
+        <div id="lockTimeoutRow" class="security-option" style="display: none;">
+          <div class="security-option-info">
+            <span class="security-option-title">Auto-lock after</span>
+            <span class="security-option-desc">Re-prompt PIN after a period of inactivity</span>
+          </div>
+          <select id="lockTimeoutSelect" class="security-select" aria-label="Auto-lock timeout">
+            <option value="0">Every action</option>
+            <option value="60">1 minute</option>
+            <option value="300" selected>5 minutes</option>
+            <option value="900">15 minutes</option>
+            <option value="3600">1 hour</option>
+          </select>
         </div>
         <div id="noPinMessage" class="no-pin-message">
           <p class="text-muted">Enable PIN protection to gate sensitive actions.</p>

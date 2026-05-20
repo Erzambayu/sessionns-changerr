@@ -1,0 +1,107 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'session-switcher2-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. session-switcher2-v1.10.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Extract version from manifest
+        id: ver
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+      - name: Validate manifest
+        run: |
+          node -e "
+            const m = require('./manifest.json');
+            if (!m.manifest_version) throw new Error('missing manifest_version');
+            if (!m.browser_specific_settings?.gecko?.id) throw new Error('missing gecko.id');
+            if (!m.browser_specific_settings?.gecko?.data_collection_permissions?.required) {
+              throw new Error('missing data_collection_permissions.required');
+            }
+            console.log('manifest OK:', m.name, m.version);
+          "
+
+      - name: Syntax check JS
+        run: |
+          node -e "new Function(require('fs').readFileSync('background/index.js','utf8'));"
+          node -e "new Function(require('fs').readFileSync('popup/index.js','utf8'));"
+          echo "JS syntax OK"
+
+      - name: Build runtime ZIP (chrome + firefox)
+        run: |
+          mkdir -p build/runtime
+          cp -r manifest.json assets background libs popup LICENSE README.md build/runtime/
+          cd build/runtime
+          zip -r "../../session-switcher2-v${{ steps.ver.outputs.version }}-chrome.zip" . -x "*.DS_Store"
+          zip -r "../../session-switcher2-v${{ steps.ver.outputs.version }}-firefox.zip" . -x "*.DS_Store"
+          cd ../..
+          cp "session-switcher2-v${{ steps.ver.outputs.version }}-firefox.zip" "session-switcher2-v${{ steps.ver.outputs.version }}-firefox.xpi"
+
+      - name: Build AMO source ZIP
+        run: |
+          mkdir -p build/source
+          cp -r manifest.json assets background libs popup LICENSE README.md PRIVACY.md build/source/
+          cat > build/source/AMO_BUILD_NOTES.md <<'EOF'
+          # Build instructions for AMO reviewers
+
+          Vanilla JavaScript, no build step. Source = runtime.
+
+          ## Verify
+          1. Extract ZIP
+          2. Firefox: about:debugging -> Load Temporary Add-on -> manifest.json
+          3. Chrome: chrome://extensions -> Load unpacked
+
+          ## Third-party
+          - libs/jszip.min.js - JSZip 3.x (MIT/GPLv3) - https://github.com/Stuk/jszip
+          EOF
+          cd build/source
+          zip -r "../../session-switcher2-v${{ steps.ver.outputs.version }}-amo-source.zip" . -x "*.DS_Store"
+
+      - name: Verify zip entries use forward slashes
+        run: |
+          unzip -l "session-switcher2-v${{ steps.ver.outputs.version }}-firefox.zip" | grep -q '\\' && {
+            echo "ERROR: backslash found in zip entries"; exit 1;
+          } || echo "zip entries OK (forward slash)"
+
+      - name: List artifacts
+        run: ls -lh session-switcher2-v*.zip session-switcher2-v*.xpi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: session-switcher2-v${{ steps.ver.outputs.version }}
+          path: |
+            session-switcher2-v*.zip
+            session-switcher2-v*.xpi
+          retention-days: 30
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/session-switcher2-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            session-switcher2-v*.zip
+            session-switcher2-v*.xpi
+          generate_release_notes: true
+          fail_on_unmatched_files: true

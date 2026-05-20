@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# build artifacts
+build/
+*.zip
+*.xpi
+release-tmp/
+amo-source-tmp/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# logs
+*.log
+npm-debug.log*
+
+# misc
+RELEASE_NOTES.md
