@@ -2,8 +2,9 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.8.1-f59e0b?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.9.0-f59e0b?style=for-the-badge)
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
+![Firefox](https://img.shields.io/badge/Firefox-109%2B-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-84cc16?style=for-the-badge)
 
 **Kelola multiple akun pada website yang sama. Local-first, keyboard-first, no telemetry.**
@@ -54,50 +55,82 @@ Extension ini dibuat untuk **tujuan edukasi dan produktivitas personal**, sepert
 - 🔄 **Smart Auto Refresh** — Keep session valid + sanity check, gak overwrite kalo logout
 - ♿ **Accessible** — `role=dialog`, focus trap, `aria-live` announcements, reduced-motion safe
 - 🚀 **Fast & Lightweight** — No framework, vanilla JS, MV3
+- 🦊 **Cross-Browser** — Works on Chrome, Edge, Brave, dan Firefox 109+
+
+---
+
+## 🌐 Browser Support
+
+| Browser | Min Version | Status |
+|---|---|---|
+| Chrome / Chromium | MV3 (any current) | ✅ Native |
+| Edge | MV3 (any current) | ✅ Native |
+| Brave / Opera / Vivaldi | MV3 (any current) | ✅ Native |
+| Firefox | 109+ (115+ ESR recommended) | ✅ Native (event page fallback) |
+| Firefox Stable | requires AMO signing | ⚠️ Pending submission
 
 ---
 
 ## 🖥️ Installation
 
+> **TL;DR**: download release artifact dari [Releases](https://github.com/Erzambayu/sessionns-changerr/releases/latest), atau clone repo. Then load unpacked sesuai browser.
+
 ### 📥 Langkah 1: Download Source Code
 
-**Opsi A - Download ZIP (Mudah):**
-1. Buka repository: https://github.com/Erzambayu/sessionns-changerr
-2. Klik tombol hijau **`<> Code`** di kanan atas
-3. Pilih **`Download ZIP`**
-4. Extract file ZIP ke folder yang mudah diakses (misal: `D:\Extensions\session-switcher2`)
+**Opsi A - Download Release ZIP (Direkomendasikan):**
+1. Buka [Releases](https://github.com/Erzambayu/sessionns-changerr/releases/latest)
+2. Download artifact sesuai browser:
+   - Chrome/Edge/Brave → `session-switcher2-vX.Y.Z-chrome.zip`
+   - Firefox → `session-switcher2-vX.Y.Z-firefox.zip` (atau `.xpi` buat dev edition)
+3. Extract ke folder yang mudah diakses (misal: `D:\Extensions\session-switcher2`)
 
-**Opsi B - Clone dengan Git (Developer):**
+**Opsi B - Download Source ZIP:**
+1. Buka repository: https://github.com/Erzambayu/sessionns-changerr
+2. Klik tombol hijau **`<> Code`** → **`Download ZIP`**
+3. Extract file ZIP
+
+**Opsi C - Clone dengan Git (Developer):**
 ```bash
 git clone https://github.com/Erzambayu/sessionns-changerr.git
 ```
 
 ---
 
-### 🔧 Langkah 2: Aktifkan Developer Mode di Chrome
+### 🔧 Langkah 2: Load Extension
 
-1. Buka browser **Google Chrome**
-2. Ketik di address bar: `chrome://extensions/` lalu tekan **Enter**
-3. Di pojok **kanan atas**, aktifkan toggle **"Developer mode"** (geser ke ON)
+#### Chrome / Edge / Brave / Chromium-based
+
+1. Buka address bar: `chrome://extensions/` (Edge: `edge://extensions/`)
+2. Aktifkan toggle **"Developer mode"** di pojok kanan atas
+3. Klik **"Load unpacked"** → pilih folder hasil extract (yang berisi `manifest.json`)
+4. Extension **"Session Switcher 2"** muncul di daftar — pastikan toggle ON
+
+> 💡 **Tips**: Klik icon puzzle 🧩 di toolbar → pin extension biar selalu kelihatan
+
+#### Firefox
+
+**Cara 1 — Temporary Install (any Firefox, hilang saat restart):**
+1. Address bar: `about:debugging#/runtime/this-firefox`
+2. Klik **"Load Temporary Add-on..."**
+3. Pilih file `manifest.json` dari folder extension
+4. Extension aktif sampai Firefox di-close
+
+**Cara 2 — Permanent (Firefox Developer Edition / Nightly / ESR Unbranded):**
+1. Address bar: `about:config` → set `xpinstall.signatures.required` = `false`
+2. Drag-and-drop file `.xpi` dari [Releases](https://github.com/Erzambayu/sessionns-changerr/releases/latest) ke window Firefox
+3. Approve install prompt
+
+**Cara 3 — Firefox Stable**: butuh AMO signing (pending submission ke addons.mozilla.org).
+
+> ⚠️ **Firefox MV3 — Permission Banner**: saat pertama buka popup, akan muncul banner kuning minta akses `<all_urls>`. Ini wajib karena Firefox MV3 bikin host permissions jadi opt-in. Klik **"Grant access"** → approve di prompt native Firefox → done.
 
 ---
 
-### 📂 Langkah 3: Load Extension
+### ✅ Verifikasi Instalasi
 
-1. Setelah Developer mode aktif, akan muncul 3 tombol baru di kiri atas
-2. Klik tombol **"Load unpacked"**
-3. Pilih folder hasil extract/clone tadi (folder yang berisi file `manifest.json`)
-4. Klik **"Select Folder"**
-
----
-
-### ✅ Langkah 4: Verifikasi Instalasi
-
-1. Extension **"Session Switcher 2"** akan muncul di daftar extensions
-2. Pastikan toggle di extension sudah **ON** (biru)
-3. Icon extension (🔄) akan muncul di toolbar Chrome
-
-**💡 Tips:** Jika tidak terlihat, klik icon puzzle 🧩 di toolbar → Pin extension Session Switcher
+- Icon Session Switcher muncul di toolbar
+- Klik icon → popup terbuka tanpa error
+- Buka site mana aja → coba Save Session
 
 ---
 
@@ -105,9 +138,9 @@ git clone https://github.com/Erzambayu/sessionns-changerr.git
 
 Jika ada update baru:
 1. Download/pull versi terbaru
-2. Buka `chrome://extensions/`
+2. Buka halaman extensions browser-mu (`chrome://extensions/` atau `about:addons`)
 3. Klik tombol **refresh** (🔄) pada Session Switcher 2
-4. Atau klik **"Remove"**, lalu **"Load unpacked"** lagi
+4. Atau **Remove** → **Load unpacked** lagi (Chrome) / **Load Temporary Add-on** lagi (Firefox)
 
 ---
 
@@ -178,11 +211,11 @@ Untuk logout dan login dengan akun berbeda:
 
 ## 🛠️ Tech Stack
 
-- **Manifest V3** — Latest Chrome Extension standard
+- **Manifest V3** — Latest extension standard, dual-target Chromium + Firefox
 - **Vanilla JavaScript** — No framework dependencies
 - **Modern CSS** — Custom properties, no glassmorphism, semantic colors
 - **Web Crypto API** — PBKDF2 (SHA-256, 200K iter) for PIN hashing
-- **Chrome APIs** — Storage, Cookies, Tabs, Scripting, Action
+- **WebExtensions APIs** — `storage`, `cookies`, `tabs`, `scripting`, `action`, `permissions` (cross-browser via `chrome.*` namespace)
 
 ---
 
@@ -202,31 +235,46 @@ Untuk logout dan login dengan akun berbeda:
 ## ⚠️ Known Limitations
 
 - **WhatsApp Web** - Disabled untuk mencegah performance issues (data terlalu besar)
-- **chrome:// pages** - Extension tidak bisa digunakan pada halaman internal Chrome
-- **Incognito Mode** - Perlu izin khusus di settings extension
+- **Internal browser pages** - Extension tidak bisa digunakan di `chrome://`, `edge://`, `about:` pages
+- **Incognito / Private Mode** - Perlu izin khusus di settings extension
+- **Firefox `<all_urls>`** - Opt-in di MV3, user mesti grant manual via banner di popup atau `about:addons` → permissions tab
+- **Firefox Stable signing** - Belum di-publish ke AMO, sementara pakai Developer Edition / Nightly atau temporary install
 
 ---
 
 ## 🐛 Troubleshooting
 
 ### Popup tidak terbuka?
-1. Buka `chrome://extensions/`
+1. Buka halaman extensions browser-mu
 2. Klik tombol **refresh** (🔄) pada extension
-3. Jika masih error, **Remove** dan **Load unpacked** lagi
+3. Jika masih error, **Remove** dan install ulang
 
 ### Session tidak tersimpan?
 - Pastikan halaman sudah fully loaded sebelum save
 - Beberapa website memiliki proteksi yang mencegah saving
+- **Firefox**: cek banner permission di popup, mungkin `<all_urls>` belum di-grant
 
 ### Error saat switch session?
 - Refresh halaman dan coba lagi
 - Hapus session lama dan buat ulang
 
+### Firefox: cookies kosong / restore gagal?
+- Buka `about:addons` → klik Session Switcher 2 → tab **Permissions**
+- Toggle **"Access your data for all websites"** ke ON
+- Reload extension
+
 ---
 
 ## 📝 Changelog
 
-### v1.8.1 (Current)
+### v1.9.0 (Current) — Firefox Support
+- 🦊 **Dual-compat Chrome + Firefox** — manifest sekarang punya `service_worker` (Chrome) + `scripts` array (Firefox event page) → load native di kedua browser tanpa fork codebase
+- 🔓 **Firefox permission banner** — runtime UA detect → kalo `<all_urls>` belum granted, popup tampilin banner kuning dengan CTA "Grant access" → klik → `chrome.permissions.request()` flow native FF prompt
+- 📦 **Release artifacts** — `.zip` (Chrome/FF unpacked) + `.xpi` (FF dev edition) di-bundle di GitHub Releases
+- 📚 **README** — install steps Firefox + browser support matrix + troubleshooting FF
+- ⚙️ Min version: Firefox 109+ (115+ ESR recommended)
+
+### v1.8.1
 - 🐛 **Fix: stuck loading di Instagram (dan site berat lainnya)** — root cause: IndexedDB IG penuh blob cache (foto, story, video) sampai ratusan MB, `getAll()` recursive serialize ngabisin tab. Sekarang:
   - **Skip IDB total** untuk heavy hosts: instagram, facebook, messenger, twitter/x, tiktok, discord, youtube, linkedin, reddit, whatsapp. Cookies + localStorage cukup untuk restore auth di site-site ini.
   - Untuk site lain: skip cache-like stores by name regex (`cache|blob|media|attachment|thumbnail|...`), cap 800 records/store, skip blob >256KB, total IDB cap 8MB.
@@ -307,6 +355,7 @@ Untuk logout dan login dengan akun berbeda:
 - **Original Project**: [session-switcher2](https://github.com/kuronekony4n/session-switcher2) by kuronekony4n
 - **Modified by**: [Erzambayu](https://github.com/Erzambayu)
 - **v1.8.0 Overhaul**: Editorial dark UI redesign, PBKDF2 PIN, quick switcher, badge counter, a11y pass, critical bug fixes
+- **v1.9.0 Firefox Support**: Dual-compat MV3 build, runtime permission banner, release artifacts
 
 ---
 
