@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Session Switcher 2",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "Manage multiple accounts on the same site. Local-first, keyboard-first, no telemetry.",
   "permissions": [
     "storage",
@@ -45,7 +45,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "session-switcher-2@kuronekony4n",
+      "id": "session-switcher-2@erzambayu",
       "strict_min_version": "109.0",
       "data_collection_permissions": {
         "required": ["none"]
