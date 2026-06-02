@@ -6,12 +6,40 @@
 ![Chrome](https://img.shields.io/badge/Chrome-Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![Firefox](https://img.shields.io/badge/Firefox-109%2B-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-84cc16?style=for-the-badge)
+![AI Powered](https://img.shields.io/badge/AI-Powered-10a37f?style=for-the-badge&logo=openai&logoColor=white)
 
 **Kelola multiple akun pada website yang sama. Local-first, keyboard-first, no telemetry.**
 
-[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Disclaimer](#%EF%B8%8F-disclaimer) • [Credits](#-credits)
+[Features](#-features) • [AI Integration](#-ai-integration) • [Installation](#-installation) • [Usage](#-usage) • [Contributing](#-contributing) • [Credits](#-credits)
 
 </div>
+
+---
+
+## 🤖 AI Integration
+
+Session Switcher 2 is exploring **AI-powered features** to make session management smarter and more intuitive.
+
+### 🎯 Planned AI Features
+
+- **🔮 Smart Session Suggestions** — AI predicts which session you need based on time, domain, and usage patterns
+- **📝 Auto-Generated Session Notes** — AI summarizes session context and extracts expiry dates
+- **🧹 Intelligent Session Cleanup** — AI identifies duplicate/stale sessions and suggests safe-to-delete
+- **📚 AI-Powered Documentation** — Auto-generate inline docs and answer contributor questions
+- **🔄 Session Conflict Resolution** — AI analyzes import conflicts and suggests best merge strategy
+
+### 🚀 Development Status
+
+This project has applied for **[OpenAI Codex for OSS](https://openai.com/form/codex-for-oss)** grant to fund GPT-4o/o1 API usage for development.
+
+**Current Phase:** Foundation (Q3 2026)
+- [ ] OpenAI SDK integration
+- [ ] Smart Session Suggestions MVP
+- [ ] Privacy-preserving architecture
+
+**Learn more:** [AI_INTEGRATION.md](AI_INTEGRATION.md)
+
+**Want to contribute?** See [CONTRIBUTING.md](CONTRIBUTING.md#ai-assisted-development)
 
 ---
 
@@ -258,6 +286,27 @@ CI runs on every push/PR via [`.github/workflows/lint.yml`](.github/workflows/li
 - **Incognito / Private Mode** - Perlu izin khusus di settings extension
 - **Firefox `<all_urls>`** - Opt-in di MV3, user mesti grant manual via banner di popup atau `about:addons` → permissions tab
 - **Firefox Stable signing** - Belum di-publish ke AMO, sementara pakai Developer Edition / Nightly atau temporary install
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup
+- Code style guide
+- Testing checklist
+- AI-assisted workflows
+- PR submission process
+
+**Quick start:**
+```bash
+git clone https://github.com/Erzambayu/sessionns-changerr.git
+cd sessionns-changerr
+npm install
+npm run check  # validate + lint
+```
+
+**Good first issues:** [Issues labeled `good-first-issue`](https://github.com/Erzambayu/sessionns-changerr/labels/good-first-issue)
 
 ---
 
