@@ -23,7 +23,7 @@ We take security seriously. If you discover a security issue, report it privatel
 
 ### Preferred Method: Email
 
-📧 **Email:** erzambayu@users.noreply.github.com
+📧 **Email:** erzambayu@gmail.com
 
 **Subject:** `[SECURITY] Brief vulnerability description`
 

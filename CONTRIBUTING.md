@@ -352,7 +352,7 @@ if (storeName.match(/cache|blob|media/i)) {
 
 - **General discussion:** [GitHub Discussions](https://github.com/Erzambayu/sessionns-changerr/discussions)
 - **Bug reports:** [GitHub Issues](https://github.com/Erzambayu/sessionns-changerr/issues)
-- **Security issues:** Email erzambayu@users.noreply.github.com (private disclosure)
+- **Security issues:** Email erzambayu@gmail.com (private disclosure)
 
 ---
 
