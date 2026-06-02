@@ -328,7 +328,7 @@ if (storeName.match(/cache|blob|media/i)) {
 - **Custom properties** — use CSS variables for colors/spacing
 - **BEM naming** — `.block__element--modifier`
 - **Mobile-first** — base styles for small screens, `@media` for desktop
-- **No vendor prefixes** — autoprefixer handles this
+- **Minimal vendor prefixes** — modern browsers only (see manifest.json targets)
 
 ### Commit Style
 
