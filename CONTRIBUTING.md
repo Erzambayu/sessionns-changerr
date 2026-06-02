@@ -328,7 +328,7 @@ if (storeName.match(/cache|blob|media/i)) {
 - **Custom properties** — use CSS variables for colors/spacing
 - **BEM naming** — `.block__element--modifier`
 - **Mobile-first** — base styles for small screens, `@media` for desktop
-- **No vendor prefixes** — autoprefixer handles this
+- **Minimal vendor prefixes** — modern browsers only (see manifest.json targets)
 
 ### Commit Style
 
@@ -352,7 +352,7 @@ if (storeName.match(/cache|blob|media/i)) {
 
 - **General discussion:** [GitHub Discussions](https://github.com/Erzambayu/sessionns-changerr/discussions)
 - **Bug reports:** [GitHub Issues](https://github.com/Erzambayu/sessionns-changerr/issues)
-- **Security issues:** Email erzambayu@users.noreply.github.com (private disclosure)
+- **Security issues:** Email erzambayu@gmail.com (private disclosure)
 
 ---
 
