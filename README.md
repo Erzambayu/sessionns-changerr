@@ -335,7 +335,17 @@ npm run check  # validate + lint
 
 ## 📝 Changelog
 
-### v1.10.0 (Current) — Productivity & Polish
+### v1.10.1 (Current) — Audit Fixes & Privacy
+- 🔒 **Self-hosted fonts** — Google Fonts (Fraunces, Inter, JetBrains Mono) kini dibundel lokal di `assets/fonts/`. Zero third-party request saat popup dibuka. Bonus: URL Google Fonts lama ternyata broken (sintaks axis `SOFT` salah) — font selama ini gagal load, sekarang beres.
+- 🛡️ **Sender validation** — background `onMessage` sekarang cek `sender.id === chrome.runtime.id`; tolak pesan dari content script / web page (defense-in-depth).
+- 🐛 **Fix: PIN modal hang** — tutup modal PIN via Escape / klik backdrop sekarang resolve gate `false` (sebelumnya `await requirePin()` gantung selamanya + `pendingSessionId` bocor → bisa switch ke session yang salah).
+- 🐛 **Fix: badge ke-reset global** — update tab tanpa URL (mis. `chrome://`) nggak lagi ngapus badge di semua tab.
+- 🐛 **Fix: cookie restore store mismatch** — cookie sekarang di-restore ke cookie store tab target, bukan store asal capture (benerin kasus incognito/berbeda profile).
+- 🐛 **Fix: localhost quick-switch** — cross-domain switch ke `localhost`/`127.x.x.x` sekarang pakai `http://` (dev server jarang serve https).
+- 🧹 **Fix: import validation** — session hasil import dengan domain invalid/junk di-drop (regex plausible-domain + cap 253 char).
+- 🧹 **Cleanup** — hapus dead background handlers (import/export/clearSessions), hapus `escapeHtml` unused, `reject` → `_reject`. Lint 0 warning.
+
+### v1.10.0 — Productivity & Polish
 - 📝 **Session notes** — optional 280-char free text per session (e.g. "trial account, expires 2026-06-01"). Editable via Save / Edit modals, displayed inline under each session.
 - 🔄 **Import modes** — choose **Merge** (add to existing, skip duplicates by domain+name) or **Replace** (wipe everything, restore only from backup, with native confirm). Default is Merge so a misclick can't wipe data.
 - ⏱️ **Auto-lock timeout** — after a successful PIN verify, gated actions inside the same popup window skip the prompt for the configured timeout (Every action / 1 min / 5 min / 15 min / 1 hour). In-memory only, resets when popup re-opens.

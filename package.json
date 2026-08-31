@@ -1,6 +1,6 @@
 {
   "name": "session-switcher2",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Manage multiple accounts on the same site. Local-first, keyboard-first, no telemetry.",
   "private": true,
   "type": "commonjs",
