@@ -86,11 +86,6 @@
   };
 
   // src/popup/utils/dom.ts
-  function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
   function getElementByIdSafe(id) {
     const element = document.getElementById(id);
     if (!element) {
@@ -129,6 +124,13 @@
         pinConfirmInput: getElementByIdSafe("pinConfirmInput"),
         pinVerifyInput: getElementByIdSafe("pinVerifyInput")
       };
+      // Hook: called whenever the pinVerify modal is hidden by ANY path
+      // (close btn, Escape, backdrop). Lets the caller resolve a pending
+      // requirePin() promise so an action doesn't hang forever.
+      this.onPinVerifyHide = null;
+      // Set true while a successful PIN verify is hiding the modal, so the
+      // hide() hook does NOT resolve the pending gate (the success path does).
+      this._suppressPinVerifyHide = false;
       this.setupEventListeners();
       this.setupTabSystem();
     }
@@ -469,6 +471,13 @@
       if (this._lastFocus && typeof this._lastFocus.focus === "function") {
         try { this._lastFocus.focus(); } catch (_) {}
       }
+      // Notify so a pending PIN gate resolves false (Escape / backdrop paths).
+      // Skipped when a successful verify is hiding the modal — that path
+      // resolves the gate itself.
+      if (modalKey === "pinVerify" && this.onPinVerifyHide && !this._suppressPinVerifyHide) {
+        try { this.onPinVerifyHide(); } catch (_) {}
+      }
+      this._suppressPinVerifyHide = false;
     }
   };
 
@@ -1315,6 +1324,24 @@
             throw new Error("Invalid import data format");
           }
 
+          // S5: sanitize each imported session — the file is a trust boundary.
+          // Only keep sessions with a plausible domain; the rest are dropped so
+          // a malicious/corrupt backup can't inject junk domains into the UI,
+          // badges, or the quick-switcher's tab-creation URL.
+          const isPlausibleDomain = (d) =>
+            typeof d === "string" &&
+            d.length <= 253 &&
+            /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?(:[0-9]{1,5})?$/i.test(d);
+          const sanitizeSession = (s) => {
+            if (!s || typeof s !== "object") return null;
+            const domain = isPlausibleDomain(s.domain) ? s.domain : null;
+            if (!domain) return null;
+            return { ...s, domain };
+          };
+          const cleanImported = importData.sessions
+            .map(sanitizeSession)
+            .filter((s) => s !== null);
+
           // Read selected import mode (merge | replace). Default to merge for safety:
           // a missing/unknown value should never silently wipe user data.
           const modeEl = document.querySelector('input[name="importMode"]:checked');
@@ -1324,7 +1351,7 @@
             // Wipe in-memory state first; persistence happens at saveStorageData() below.
             this.state.sessions = [];
             this.state.activeSessions = {};
-            const importedSessions = importData.sessions.map((s) => ({
+            const importedSessions = cleanImported.map((s) => ({
               ...s,
               id: generateId() // Regenerate IDs to avoid carrying over stale references
             }));
@@ -1335,7 +1362,7 @@
             const existingKeys = new Set(
               this.state.sessions.map((s) => `${s.domain || ""}::${(s.name || "").trim().toLowerCase()}`)
             );
-            const importedSessions = importData.sessions
+            const importedSessions = cleanImported
               .filter((s) => {
                 const key = `${s.domain || ""}::${(s.name || "").trim().toLowerCase()}`;
                 return !existingKeys.has(key);
@@ -1387,6 +1414,19 @@
       popupService = new PopupService();
       modalManager = new ModalManager();
       loadingManager = new LoadingManager();
+
+      // B1 fix: if the PIN modal is dismissed by ANY path (Escape, backdrop,
+      // close btn), the pending gate must resolve(false) — otherwise the
+      // awaiting action hangs forever and a stale pendingSessionId could
+      // trigger a wrong switch on the next open.
+      modalManager.onPinVerifyHide = () => {
+        if (pendingPinResolver) {
+          const r = pendingPinResolver;
+          pendingPinResolver = null;
+          r(false);
+        }
+        pendingSessionId = null;
+      };
 
       const sessionsListEl = getElementByIdSafe("sessionsList");
       if (!sessionsListEl) {
@@ -1881,21 +1921,23 @@
           const sec = await popupService.getLockTimeoutSec();
           pinUnlockedUntil = sec > 0 ? Date.now() + sec * 1000 : 0;
         } catch (_) { pinUnlockedUntil = 0; }
+        // Capture pending gate BEFORE hiding: hide() fires onPinVerifyHide which
+        // resolves a still-pending resolver as false. Resolve paths themselves.
+        const pendingResolver = pendingPinResolver;
+        pendingPinResolver = null;
+        const pendingSwitchId = pendingSessionId;
+        pendingSessionId = null;
         modalManager.hidePinVerifyModal();
         // Path A: generic gate via requirePin()
-        if (pendingPinResolver) {
-          const r = pendingPinResolver;
-          pendingPinResolver = null;
-          r(true);
+        if (pendingResolver) {
+          pendingResolver(true);
           return;
         }
         // Path B: switch-flow
-        if (pendingSessionId) {
-          const sid = pendingSessionId;
-          pendingSessionId = null;
+        if (pendingSwitchId) {
           await loadingManager.withLoading(async () => {
             try {
-              await popupService.switchToSession(sid);
+              await popupService.switchToSession(pendingSwitchId);
               renderSessionList();
             } catch (error) {
               modalManager.showErrorModal(handleError(error, "Switch Session"));
@@ -2112,7 +2154,10 @@
       }
       // Cross-domain: open new tab to that domain, after loaded inject session via background
       try {
-        const newTab = await chrome.tabs.create({ url: `https://${session.domain}/`, active: true });
+        // B3: localhost / 127.x.x.x use http (dev servers rarely serve https)
+        const isLocalhost = /^(localhost|127\.\d+\.\d+\.\d+)(:\d+)?$/.test(session.domain);
+        const proto = isLocalhost ? "http" : "https";
+        const newTab = await chrome.tabs.create({ url: `${proto}://${session.domain}/`, active: true });
         // wait for tab to reach 'complete' (one-shot)
         await new Promise((resolve) => {
           const listener = (tabId, info) => {

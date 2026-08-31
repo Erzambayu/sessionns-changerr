@@ -81,7 +81,7 @@
       });
       await Promise.all(clearPromises);
     }
-    async restoreCookies(cookies, domain) {
+    async restoreCookies(cookies, domain, tabId) {
       if (!cookies || !Array.isArray(cookies)) {
         console.error("Invalid cookies array provided:", cookies);
         return;
@@ -90,7 +90,18 @@
         console.error("Invalid domain provided for cookie restoration");
         return;
       }
-      console.log(`Restoring ${cookies.length} cookies for domain: ${domain}`);
+      // B4: write to the TARGET tab's cookie store, not the store the cookie
+      // was captured from (which may be a different profile, e.g. incognito).
+      let targetStoreId = "0";
+      if (tabId) {
+        try {
+          const tab = await chrome.tabs.get(tabId);
+          if (tab.cookieStoreId) targetStoreId = tab.cookieStoreId;
+        } catch (e) {
+          console.warn("[Cookies] Could not get tab cookieStoreId for restore, using default store:", e);
+        }
+      }
+      console.log(`Restoring ${cookies.length} cookies for domain: ${domain} (store: ${targetStoreId})`);
       let successCount = 0;
       let failureCount = 0;
       let skippedCount = 0;
@@ -106,6 +117,7 @@
         }
         try {
           const cookieDetails = this.prepareCookieForRestore(cookie, domain);
+          cookieDetails.storeId = targetStoreId;
 
           // Fix for hostOnly cookies: if a cookie is hostOnly, we must NOT supply the domain.
           // Chrome API infers hostOnly=true if domain is omitted.
@@ -461,7 +473,7 @@
             preparedStores[storeName] = records;
           }
 
-          await new Promise((resolve, reject) => {
+          await new Promise((resolve, _reject) => {
             const req = indexedDB.open(dbName, dbData.version);
             req.onupgradeneeded = (e) => {
               const db = e.target.result;
@@ -696,7 +708,7 @@
         try {
           await withTimeout(
             Promise.allSettled([
-              this.cookieHandler.restoreCookies(cookies, domain),
+              this.cookieHandler.restoreCookies(cookies, domain, tabId),
               this.storageHandler.restoreStorageData(tabId, {
                 localStorage: localStorage2,
                 sessionStorage: sessionStorage2,
@@ -739,9 +751,6 @@
     GET_CURRENT_SESSION: "getCurrentSession",
     SWITCH_SESSION: "switchSession",
     CLEAR_SESSION: "clearSession",
-    CLEAR_SESSIONS: "clearSessions",
-    EXPORT_SESSIONS: "exportSessions",
-    IMPORT_SESSIONS: "importSessions",
     AUTO_REFRESH_SESSION: "autoRefreshSession"
   };
 
@@ -752,7 +761,13 @@
     constructor() {
       this.sessionHandler = new SessionHandler();
     }
-    handleMessage(message, _, sendResponse) {
+    handleMessage(message, sender, sendResponse) {
+      // Security: only accept messages from this extension's own pages (popup).
+      // Reject anything from content scripts or web pages.
+      if (!sender || sender.id !== chrome.runtime.id) {
+        sendResponse({ success: false, error: "Unauthorized sender" });
+        return true;
+      }
       if (!message || typeof message !== "object" || !message.action) {
         sendResponse({ success: false, error: "Invalid message format" });
         return true;
@@ -775,15 +790,6 @@
           case MESSAGE_ACTIONS.CLEAR_SESSION:
             await this.handleClearSession(message, sendResponse);
             break;
-          case MESSAGE_ACTIONS.CLEAR_SESSIONS:
-            await this.handleClearSessions(message, sendResponse);
-            break;
-          case MESSAGE_ACTIONS.EXPORT_SESSIONS:
-            await this.handleExportSessions(message, sendResponse);
-            break;
-          case MESSAGE_ACTIONS.IMPORT_SESSIONS:
-            await this.handleImportSessions(message, sendResponse);
-            break;
           case MESSAGE_ACTIONS.AUTO_REFRESH_SESSION:
             await this.handleAutoRefreshSession(message, sendResponse);
             break;
@@ -805,55 +811,6 @@
     }
     async handleClearSession(message, sendResponse) {
       await this.sessionHandler.clearSession(message.domain, message.tabId);
-      sendResponse({ success: true });
-    }
-    async handleClearSessions(message, sendResponse) {
-      const { clearOption, domain } = message;
-      if (clearOption === "current") {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab && tab.id) {
-          await this.sessionHandler.clearSession(domain, tab.id);
-          // Note: The popup handles removing it from storage, but we can double check or just let popup handle it.
-          // The original code removed it from storage here too. Let's keep it for safety.
-          const sessions = await this.getStoredSessions();
-          const updatedSessions = sessions.filter((s) => s.domain !== domain);
-          await this.saveStoredSessions(updatedSessions);
-        }
-      } else if (clearOption === "all") {
-        await this.saveStoredSessions([]);
-        await this.saveActiveSessionsMap({});
-      }
-      sendResponse({ success: true });
-    }
-    async handleExportSessions(message, sendResponse) {
-      const { exportOption, domain } = message;
-      const sessions = await this.getStoredSessions();
-      let sessionsToExport = sessions;
-      if (exportOption === "current") {
-        sessionsToExport = sessions.filter((s) => s.domain === domain);
-      }
-      const exportData = {
-        version: "1.0",
-        exportDate: (/* @__PURE__ */ new Date()).toISOString(),
-        sessions: sessionsToExport
-      };
-      sendResponse({ success: true, data: JSON.stringify(exportData, null, 2) });
-    }
-    async handleImportSessions(message, sendResponse) {
-      const { data } = message;
-      const importData = JSON.parse(data);
-      if (!importData || !importData.sessions || !Array.isArray(importData.sessions)) {
-        throw new Error("Invalid import data format");
-      }
-      const currentSessions = await this.getStoredSessions();
-      const importedSessions = importData.sessions;
-      // Generate new IDs for imported sessions to avoid collisions
-      const sessionsWithNewIds = importedSessions.map((session) => ({
-        ...session,
-        id: crypto.randomUUID()
-      }));
-      const mergedSessions = [...currentSessions, ...sessionsWithNewIds];
-      await this.saveStoredSessions(mergedSessions);
       sendResponse({ success: true });
     }
     async handleAutoRefreshSession(message, sendResponse) {
@@ -975,7 +932,11 @@
   }
   async function updateBadgeForTab(tab) {
     if (!tab || !tab.id || !tab.url) {
-      try { await chrome.action.setBadgeText({ text: "" }); } catch (_) {}
+      // Only clear THIS tab's badge if we know its id. Clearing without tabId
+      // wipes badges on every tab (onUpdated fires for chrome:// etc).
+      if (tab && tab.id) {
+        try { await chrome.action.setBadgeText({ tabId: tab.id, text: "" }); } catch (_) {}
+      }
       return;
     }
     if (!/^https?:/i.test(tab.url)) {
